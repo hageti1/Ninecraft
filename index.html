@@ -427,8 +427,8 @@ function mkRecipes() {
   sh('エンチャント台', [' B ', 'DOD', 'OOO'], { give: { ench: 1 } }, 'item:ench');
   ls('エンダーアイ', ['pearl', 'blaze'], { give: { eye: 1 } }, 'item:eye');
   ls('9mm弾 ×40', ['cobble', 'coal'], { give: { ammo: 40 } }, 'ammo:ammo');
-  ls('散弾 ×20', ['ingot', 'coal'], { give: { shells: 20 } }, 'ammo:shells');
-  ls('ライフル弾 ×15', ['ingot', 'coal'], { give: { slugs: 15 } }, 'ammo:slugs');
+  ls('散弾 ×20', ['cobble', 'coal', 'coal'], { give: { shells: 20 } }, 'ammo:shells');
+  ls('ライフル弾 ×15', ['cobble', 'cobble', 'coal'], { give: { slugs: 15 } }, 'ammo:slugs');
   sh('アサルトライフル', ['III', 'PII', 'P  '], { weapon: 1 }, 'gun:1');
   sh('ショットガン', ['II ', 'IPP', '  P'], { weapon: 2 }, 'gun:2');
   sh('スナイパー', ['III', 'IPK', ' PP'], { weapon: 3 }, 'gun:3');
@@ -3096,7 +3096,7 @@ function hostHandle(from, m) {
 }
 function guestHandle(m) {
   switch (m.t) {
-    case 'welcome': beginGame({ seed: m.seed, edits: m.edits, time: m.time, ents: m.ents, rain: m.rain }); break;
+    case 'welcome': net.gotWelcome = true; if (m.W !== W || m.D !== D) { alert('ホストの版(マップサイズ ' + (m.W || 256) + ')と違うため参加できません。ホストも最新版のファイルにしてください。'); setStatus('版が違います'); break; } beginGame({ seed: m.seed, edits: m.edits, time: m.time, ents: m.ents, rain: m.rain }); break;
     case 'state': {
       worldTime = m.time; rainTarget = m.r || 0; for (const id in m.p) if (id !== net.id) applyRemote(id, m.p[id]);
       for (const id of [...players.keys()]) if (!(id in m.p)) removePlayer(id);
@@ -3130,7 +3130,10 @@ function hostRoom(tries = 0, saved) {
   peer.on('open', id => { net.peer = peer; net.role = 'host'; net.id = id; beginGame(saved || { seed: seedFromInput(), edits: [], time: worldTime }).then(() => feedMsg('部屋コード: ' + net.code + ' (友達に教えよう)', 'good')); });
   peer.on('error', e => { if (e.type === 'unavailable-id' && tries < 5) hostRoom(tries + 1, saved); else if (!started) setStatus('エラー: ' + e.type); });
   peer.on('connection', conn => {
-    conn.on('open', () => { net.conns.set(conn.peer, conn); const ed = []; for (const [i, b] of edits) ed.push(i, b); conn.send({ t: 'welcome', seed, edits: ed, time: worldTime, ents: [...ents], rain: rainTarget }); });
+    conn.on('open', () => {
+      const sendWelcome = () => { net.conns.set(conn.peer, conn); const ed = []; for (const [i, b] of edits) ed.push(i, b); conn.send({ t: 'welcome', seed, edits: ed, time: worldTime, ents: [...ents], rain: rainTarget, W, D }); };
+      if (started) sendWelcome(); else { const iv = setInterval(() => { if (started) { clearInterval(iv); sendWelcome(); } }, 300); }   // ホストの地形生成が終わってから送る
+    });
     conn.on('data', m => hostHandle(conn.peer, m));
     const gone = () => { net.conns.delete(conn.peer); removePlayer(conn.peer); }; conn.on('close', gone); conn.on('error', gone);
   });
@@ -3139,7 +3142,7 @@ function joinRoom(code) {
   if (typeof Peer === 'undefined') return setStatus('通信ライブラリを読み込めませんでした(オフライン?)');
   code = code.trim().toLowerCase().replace(/^#/, ''); if (!code) return setStatus('部屋コードを入力してください');
   net.code = code; setStatus('接続中…'); const peer = new Peer(); net.peer = peer;
-  const to = setTimeout(() => { if (!started) setStatus('接続できませんでした(コードを確認してください)'); }, 15000);
+  const to = setTimeout(() => { if (!started && !net.gotWelcome) setStatus('接続できませんでした(コードを確認してください)'); }, 15000);
   peer.on('open', id => {
     net.id = id; net.role = 'guest'; const conn = peer.connect('nc9-' + code, { reliable: true }); net.hostConn = conn;
     conn.on('data', guestHandle); conn.on('close', () => { feedMsg('ホストとの接続が切れました', 'bad'); setTimeout(() => alert('ホストとの接続が切れました。ページを更新してください。'), 300); });
@@ -3324,7 +3327,7 @@ async function beginGame(m) {
   if (m.player) { P.x = m.player.x; P.y = m.player.y; P.z = m.player.z; } else { const s0 = findSpawn(W / 2, D / 2, 16); P.x = s0[0]; P.y = s0[1]; P.z = s0[2]; }
   streamChunks(true); { const tot = dirty.size; let n = 0; while (dirty.size) { n += processDirty(4); setLoad(.5 + .5 * n / Math.max(1, tot), 'メッシュを構築中…'); await tick(); } }
   worldTime = m.time != null ? m.time : worldTime; lastDay = dayNum();
-  if (m.player) { const q = m.player; Object.assign(P, { x: q.x, y: q.y, z: q.z, hp: q.hp, hunger: q.hunger, sat: q.sat || 0, xp: q.xp || 0, lvl: q.lvl || 0, armor: q.armor || 0, spawn: q.spawn || null, ench: q.ench || { pick: 0, axe: 0, shovel: 0, sword: 0, armor: 0 } }); Object.assign(P.inv, q.inv); P.has = q.has; P.mag = q.mag; for (let g = 0; g < 4; g++) P.inv['g' + g] = P.has[g] ? 1 : 0; P.slot = q.slot || 0; Object.assign(P.tools, q.tools || {}); Object.assign(P.dur, q.dur || {}); if (q.slots) P.slots = q.slots; }
+  if (m.player) { const q = m.player; Object.assign(P, { x: q.x, y: q.y, z: q.z, hp: q.hp, hunger: q.hunger, sat: q.sat || 0, xp: q.xp || 0, lvl: q.lvl || 0, armor: q.armor || 0, spawn: q.spawn || null, ench: q.ench || { pick: 0, axe: 0, shovel: 0, sword: 0, armor: 0 } }); Object.assign(P.inv, q.inv); P.has = q.has; P.mag = q.mag; for (let g = 0; g < NW; g++) P.inv['g' + g] = P.has[g] ? 1 : 0; P.slot = q.slot || 0; Object.assign(P.tools, q.tools || {}); Object.assign(P.dur, q.dur || {}); if (q.slots) P.slots = q.slots; }
   else { P.yaw = Math.random() * 6.28; }
   started = true; buildHotbar(); updateHUD(); $('loading').classList.add('hidden'); $('hud').classList.remove('hidden'); audInit(); setVolume(SET.vol); if (TOUCH) locked = true; else canvas.requestPointerLock && canvas.requestPointerLock(); showPause();
 }
