@@ -241,7 +241,7 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const W = 384, H = 64, D = 384, CS = 16, NCX = W / CS, NCZ = D / CS, SEA = 22;
 const DAY = 1200;                      // 1日(秒) = 本家と同じ20分
 const PW = 0.3, PH = 1.8, EYE = 1.62;
-const TILE = 16, CELL = 40, GUT = 4, ACOLS = 8, AROWS = 8, AW = ACOLS * CELL, AH = AROWS * CELL;
+const TILE = 16, CELL = 40, GUT = 4, ACOLS = 8, AROWS = 9, AW = ACOLS * CELL, AH = AROWS * CELL;
 
 // ---------- ハッシュ / ノイズ ----------
 function h2(x, z, s) {
@@ -271,9 +271,9 @@ function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 // ---------- ブロック ----------
 const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANKS: 7, SAND: 8, COAL: 9, IRON: 10, BEDROCK: 11, WATER: 12, TALLGRASS: 13, FLOWER_R: 14, FLOWER_Y: 15, TORCH: 16,
   GLASS: 17, GOLD: 18, DIAMOND: 19, CRAFT: 20, FURNACE: 21, CHEST: 22, FARM: 23, WHEAT0: 24, WHEAT1: 25, WHEAT2: 26, BED: 27, GRAVEL: 28 };
-const NB = 112;
+const NB = 120;
 Object.assign(B, { WF1: 29, WF2: 30, WF3: 31, WF4: 32, WF5: 33, WF6: 34, WF7: 35, LAVA: 36, LF1: 37, LF2: 38, LF3: 39, DOOR0: 40, OBSIDIAN: 56, CACTUS: 57, SNOW: 58, ICE: 59,
-  RSORE: 60, LEVER0: 61, LEVER1: 62, LAMP0: 63, LAMP1: 64, RSTORCH1: 65, RSTORCH0: 66, DUST0: 70, PISTON0: 86, ENCH: 100, SHELF: 101, NETHERRACK: 102, SOULSAND: 103, GLOWSTONE: 104, PORTAL: 105, ENDSTONE: 106, EFRAME: 107, EPORTAL: 108, BUTTON0: 110, BUTTON1: 111 });
+  RSORE: 60, LEVER0: 61, LEVER1: 62, LAMP0: 63, LAMP1: 64, RSTORCH1: 65, RSTORCH0: 66, DUST0: 70, PISTON0: 86, ENCH: 100, SHELF: 101, NETHERRACK: 102, SOULSAND: 103, GLOWSTONE: 104, PORTAL: 105, ENDSTONE: 106, EFRAME: 107, EPORTAL: 108, BUTTON0: 110, BUTTON1: 111, TNT: 112, MINER: 113, RAIL: 114 });
 // 流体・ドア・レッドストーンの判定
 const isWater = b => b === 12 || (b >= 29 && b <= 35), isLava = b => b === 36 || (b >= 37 && b <= 39), isFluid = b => isWater(b) || isLava(b);
 const isDoor = b => b >= 40 && b <= 55, doorTop = b => (b - 40) & 8, doorOpen = b => (b - 40) & 4, doorFace = b => (b - 40) & 3;
@@ -282,10 +282,11 @@ const fluidLevel = b => b === 12 ? 0 : b >= 29 && b <= 35 ? b - 28 : b === 36 ? 
 const waterId = l => l === 0 ? 12 : 28 + l, lavaId = l => l === 0 ? 36 : 36 + l;
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, COAL: 10, IRON: 11, BEDROCK: 12, TALLGRASS: 13, FLOWER_R: 14, FLOWER_Y: 15, TORCH: 16,
   GLASS: 17, GOLD: 18, DIAMOND: 19, CRAFT_TOP: 20, CRAFT_SIDE: 21, FURN_FRONT: 22, FURN_TOP: 23, CHEST_SIDE: 24, CHEST_TOP: 25, FARM_TOP: 26, WHEAT0: 27, WHEAT1: 28, WHEAT2: 29, BED_TOP: 30, BED_SIDE: 31, GRAVEL: 32, NTILES: 33 };
-Object.assign(T, { LAVA: 33, DOOR_B: 34, DOOR_T: 35, OBSIDIAN: 36, CACTUS_SIDE: 37, CACTUS_TOP: 38, SNOW: 39, ICE: 40, RSORE: 41, DUST_OFF: 42, DUST_ON: 43, LEVER: 44, LAMP_OFF: 45, LAMP_ON: 46, RST_ON: 47, RST_OFF: 48, PISTON_SIDE: 49, PISTON_TOP: 50, ENCH_TOP: 51, ENCH_SIDE: 52, SHELF: 53, NETHERRACK: 54, SOULSAND: 55, GLOWSTONE: 56, PORTAL: 57, ENDSTONE: 58, EFRAME_TOP: 59, EFRAME_SIDE: 60, BUTTON: 61, NTILES: 62 });
+Object.assign(T, { LAVA: 33, DOOR_B: 34, DOOR_T: 35, OBSIDIAN: 36, CACTUS_SIDE: 37, CACTUS_TOP: 38, SNOW: 39, ICE: 40, RSORE: 41, DUST_OFF: 42, DUST_ON: 43, LEVER: 44, LAMP_OFF: 45, LAMP_ON: 46, RST_ON: 47, RST_OFF: 48, PISTON_SIDE: 49, PISTON_TOP: 50, ENCH_TOP: 51, ENCH_SIDE: 52, SHELF: 53, NETHERRACK: 54, SOULSAND: 55, GLOWSTONE: 56, PORTAL: 57, ENDSTONE: 58, EFRAME_TOP: 59, EFRAME_SIDE: 60, BUTTON: 61, TNT_SIDE: 62, TNT_TOP: 63, MINER_TOP: 64, MINER_SIDE: 65, RAIL: 66, NTILES: 67 });
 // [top, side, bottom]
 const BTILE = [];
 const bt = (b, t, s, d) => { BTILE[b] = [t, s === undefined ? t : s, d === undefined ? (s === undefined ? t : s) : d]; };
+bt(B.TNT, T.TNT_TOP, T.TNT_SIDE, T.TNT_TOP); bt(B.MINER, T.MINER_TOP, T.MINER_SIDE, T.MINER_TOP); bt(B.RAIL, T.RAIL);
 bt(B.GRASS, T.GRASS_TOP, T.GRASS_SIDE, T.DIRT); bt(B.DIRT, T.DIRT); bt(B.STONE, T.STONE); bt(B.COBBLE, T.COBBLE);
 bt(B.LOG, T.LOG_TOP, T.LOG_SIDE, T.LOG_TOP); bt(B.LEAVES, T.LEAVES); bt(B.PLANKS, T.PLANKS); bt(B.SAND, T.SAND);
 bt(B.COAL, T.COAL); bt(B.IRON, T.IRON); bt(B.BEDROCK, T.BEDROCK); bt(B.TALLGRASS, T.TALLGRASS); bt(B.FLOWER_R, T.FLOWER_R); bt(B.FLOWER_Y, T.FLOWER_Y); bt(B.TORCH, T.TORCH);
@@ -326,7 +327,7 @@ for (let b = 36; b <= 39; b++) LIGHT[b] = b === 36 ? 15 : 12;
 const SHAPE = new Uint8Array(NB);     // 1=薄い板などカスタム形状(ブロック直方体では描かない)
 for (let b = 40; b <= 55; b++) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = doorOpen(b) ? 0 : 1; }
 for (let b = 70; b <= 85; b++) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = 0; }
-for (const b of [B.LEVER0, B.LEVER1, B.BUTTON0, B.BUTTON1, B.RSTORCH0, B.RSTORCH1, B.PORTAL, B.EPORTAL]) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = 0; }
+for (const b of [B.LEVER0, B.LEVER1, B.BUTTON0, B.BUTTON1, B.RSTORCH0, B.RSTORCH1, B.PORTAL, B.EPORTAL, B.RAIL]) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = 0; }
 CUBE[B.EPORTAL] = 0; LIGHT[B.GLOWSTONE] = 15; LIGHT[B.LAMP1] = 15; LIGHT[B.RSTORCH1] = 7; LIGHT[B.PORTAL] = 11; OPAC[B.GLASS] = 0; OPAC[B.ICE] = 3;
 for (const b of [B.OBSIDIAN, B.RSORE, B.ENCH, B.NETHERRACK, B.ENDSTONE, B.PISTON0]) { ROCK[b] = 1; TOOLOF[b] = 'pick'; }
 for (const b of [B.SHELF]) TOOLOF[b] = 'axe';
@@ -336,7 +337,7 @@ for (let b = 86; b <= 99; b++) { ROCK[b] = 1; TOOLOF[b] = 'pick'; }
 REQ[B.OBSIDIAN] = 4; REQ[B.RSORE] = 3; REQ[B.ENCH] = 1; REQ[B.NETHERRACK] = 1; REQ[B.ENDSTONE] = 1;
 Object.assign(HARD, { [B.OBSIDIAN]: 40, [B.CACTUS]: .4, [B.SNOW]: .2, [B.ICE]: .5, [B.RSORE]: 3.4, [B.LEVER0]: .5, [B.LEVER1]: .5, [B.LAMP0]: .3, [B.LAMP1]: .3, [B.RSTORCH0]: .05, [B.RSTORCH1]: .05,
   [B.ENCH]: 4, [B.SHELF]: 1.5, [B.NETHERRACK]: .5, [B.SOULSAND]: .5, [B.GLOWSTONE]: .4, [B.PORTAL]: 1e9, [B.ENDSTONE]: 3, [B.EFRAME]: 1e9, [B.EPORTAL]: 1e9, [B.BUTTON0]: .5, [B.BUTTON1]: .5 });
-for (let b = 40; b <= 55; b++) HARD[b] = 1.0; for (let b = 70; b <= 85; b++) HARD[b] = .05; for (let b = 86; b <= 99; b++) HARD[b] = 1.5; for (let b = 29; b < 40; b++) HARD[b] = 1e9; HARD[B.WATER] = HARD[B.LAVA] = 1e9;
+for (let b = 40; b <= 55; b++) HARD[b] = 1.0; for (let b = 70; b <= 85; b++) HARD[b] = .05; for (let b = 86; b <= 99; b++) HARD[b] = 1.5; for (let b = 29; b < 40; b++) HARD[b] = 1e9; HARD[B.WATER] = HARD[B.LAVA] = 1e9; HARD[B.TNT] = .1; HARD[B.MINER] = 2; HARD[B.RAIL] = .1;
 const TOOLMAX = [0, 59, 131, 250, 1561], TOOLSPD = [1, 2.2, 4, 6, 8], TIERJP = ['素手', '木の', '石の', '鉄の', 'ダイヤの'], TOOLJP = { pick: 'ツルハシ', axe: '斧', shovel: 'シャベル', sword: '剣' };
 const SWORDDMG = [1, 4, 5, 6, 7];
 const ARMORRED = [0, .2, .45, .6], ARMORJP = ['なし', '革の防具', '鉄の防具', 'ダイヤの防具'];
@@ -348,8 +349,8 @@ BSND[B.DIRT] = 'dirt'; BSND[B.FARM] = 'dirt'; BSND[B.SAND] = 'sand'; BSND[B.GRAV
 const DROPKEY = []; DROPKEY[B.GRASS] = 'dirt'; DROPKEY[B.DIRT] = 'dirt'; DROPKEY[B.STONE] = 'cobble'; DROPKEY[B.COBBLE] = 'cobble';
 DROPKEY[B.LOG] = 'log'; DROPKEY[B.PLANKS] = 'planks'; DROPKEY[B.SAND] = 'sand'; DROPKEY[B.COAL] = 'coal'; DROPKEY[B.IRON] = 'iron'; DROPKEY[B.TORCH] = 'torch';
 DROPKEY[B.GOLD] = 'gold'; DROPKEY[B.DIAMOND] = 'diamond'; DROPKEY[B.CRAFT] = 'craft'; DROPKEY[B.FURNACE] = 'furnace'; DROPKEY[B.CHEST] = 'chest'; DROPKEY[B.FARM] = 'dirt';
-DROPKEY[B.BED] = 'bed'; DROPKEY[B.GRAVEL] = 'gravel'; DROPKEY[B.WHEAT2] = 'wheat';
-for (const b of [B.SNOW]) BSND[b] = 'grass'; BSND[B.SOULSAND] = 'sand'; BSND[B.GLASS] = 'glass'; BSND[B.ICE] = 'glass';
+DROPKEY[B.BED] = 'bed'; DROPKEY[B.TNT] = 'tnt'; DROPKEY[B.MINER] = 'miner'; DROPKEY[B.RAIL] = 'rail'; DROPKEY[B.GRAVEL] = 'gravel'; DROPKEY[B.WHEAT2] = 'wheat';
+for (const b of [B.SNOW]) BSND[b] = 'grass'; BSND[B.SOULSAND] = 'sand'; BSND[B.GLASS] = 'glass'; BSND[B.ICE] = 'glass'; BSND[B.TNT] = 'grass'; BSND[B.RAIL] = 'wood'; BSND[B.MINER] = 'stone';
 for (let b = 40; b <= 55; b++) BSND[b] = 'wood'; BSND[B.SHELF] = 'wood'; BSND[B.LEVER0] = BSND[B.LEVER1] = 'wood'; BSND[B.CACTUS] = 'grass';
 Object.assign(DROPKEY, { [B.OBSIDIAN]: 'obsidian', [B.CACTUS]: 'cactus', [B.SNOW]: 'snow', [B.RSORE]: 'redstone', [B.LEVER0]: 'lever', [B.LEVER1]: 'lever', [B.LAMP0]: 'lamp', [B.LAMP1]: 'lamp', [B.RSTORCH0]: 'rstorch', [B.RSTORCH1]: 'rstorch',
   [B.ENCH]: 'ench', [B.SHELF]: 'shelf', [B.NETHERRACK]: 'netherrack', [B.SOULSAND]: 'soulsand', [B.GLOWSTONE]: 'glowstone', [B.ENDSTONE]: 'endstone', [B.BUTTON0]: 'button', [B.BUTTON1]: 'button' });
@@ -357,13 +358,13 @@ for (let b = 40; b <= 55; b++) DROPKEY[b] = 'door'; for (let b = 70; b <= 85; b+
 const XPORE = { [B.COAL]: 2, [B.IRON]: 1, [B.GOLD]: 2, [B.DIAMOND]: 6, [B.RSORE]: 3 };
 // ---------- アイテム ----------
 // 個数制インベントリ。置けるもの(ITEMB)・食べ物(FOOD)・素材
-const ITEMB = { obsidian: B.OBSIDIAN, cactus: B.CACTUS, snow: B.SNOW, redstone: B.DUST0, lever: B.LEVER0, lamp: B.LAMP0, rstorch: B.RSTORCH1, ench: B.ENCH, shelf: B.SHELF, netherrack: B.NETHERRACK, soulsand: B.SOULSAND, glowstone: B.GLOWSTONE, endstone: B.ENDSTONE, button: B.BUTTON0, piston: B.PISTON0, dirt: B.DIRT, cobble: B.COBBLE, planks: B.PLANKS, log: B.LOG, sand: B.SAND, torch: B.TORCH, glass: B.GLASS, stone: B.STONE, gravel: B.GRAVEL, craft: B.CRAFT, furnace: B.FURNACE, chest: B.CHEST, bed: B.BED };
+const ITEMB = { obsidian: B.OBSIDIAN, cactus: B.CACTUS, snow: B.SNOW, redstone: B.DUST0, lever: B.LEVER0, lamp: B.LAMP0, rstorch: B.RSTORCH1, ench: B.ENCH, shelf: B.SHELF, netherrack: B.NETHERRACK, soulsand: B.SOULSAND, glowstone: B.GLOWSTONE, endstone: B.ENDSTONE, button: B.BUTTON0, piston: B.PISTON0, dirt: B.DIRT, cobble: B.COBBLE, planks: B.PLANKS, log: B.LOG, sand: B.SAND, torch: B.TORCH, glass: B.GLASS, stone: B.STONE, gravel: B.GRAVEL, craft: B.CRAFT, furnace: B.FURNACE, chest: B.CHEST, bed: B.BED, tnt: B.TNT, miner: B.MINER, rail: B.RAIL };
 const FOOD = { apple: [4, 2.4], raw: [2, 1.2], cooked: [8, 12.8], bread: [5, 6], fish: [2, .4], cookedfish: [5, 6], };
-const SPECIAL = { door: 1, bucket: 1, wbucket: 1, lbucket: 1, rod: 1, fas: 1, boat: 1 };   // [満腹度, 隠し満腹度]
+const SPECIAL = { door: 1, bucket: 1, wbucket: 1, lbucket: 1, rod: 1, fas: 1, boat: 1, cart: 1, horse: 1 };   // [満腹度, 隠し満腹度]
 const INVJP = { dirt: '土', cobble: '丸石', planks: '板材', log: '原木', sand: '砂', torch: '松明', coal: '石炭', iron: '鉄鉱石', ingot: '鉄インゴット', gold: '金鉱石', goldingot: '金インゴット', diamond: 'ダイヤ', stick: '棒', glass: 'ガラス', stone: '石', gravel: '砂利',
   craft: '作業台', furnace: 'かまど', chest: 'チェスト', bed: 'ベッド', seeds: '種', wheat: '小麦', bread: 'パン', apple: 'リンゴ', raw: '生肉', cooked: '焼き肉', wool: '羊毛', leather: '革', ammo: '9mm弾', shells: '散弾', slugs: 'ライフル弾', door: 'ドア', obsidian: '黒曜石', cactus: 'サボテン', snow: '雪ブロック', redstone: 'レッドストーン', lever: 'レバー', lamp: 'レッドストーンランプ', rstorch: 'レッドストーントーチ', ench: 'エンチャント台', shelf: '本棚', netherrack: 'ネザーラック', soulsand: 'ソウルサンド', glowstone: 'グロウストーン', endstone: 'エンドストーン', button: 'ボタン', piston: 'ピストン', bucket: 'バケツ', wbucket: '水バケツ', lbucket: '溶岩バケツ', rod: '釣り竿', fish: '生魚', cookedfish: '焼き魚', string: '糸', flint: 'フリント', fas: '火打ち石と打ち金', book: '本', pearl: 'エンダーパール', eye: 'エンダーアイ', blaze: 'ブレイズロッド', g0: 'ハンドガン', g1: 'アサルトライフル', g2: 'ショットガン', g3: 'スナイパー' };
-const GUNIDX = { g0: 0, g1: 1, g2: 2, g3: 3, g4: 4, g5: 5, g6: 6, g7: 7 };
-INVJP.boat = 'ボート';
+const GUNIDX = { g0: 0, g1: 1, g2: 2, g3: 3, g4: 4, g5: 5, g6: 6, g7: 7, g8: 8 };
+INVJP.boat = 'ボート'; INVJP.tnt = 'TNT'; INVJP.miner = '自動採掘機'; INVJP.rail = 'レール'; INVJP.cart = 'トロッコ'; INVJP.horse = '馬'; INVJP.rockets = 'ロケット弾';
 const ITEMKEYS = Object.keys(INVJP);
 const USABLE = k => ITEMB[k] !== undefined || FOOD[k] !== undefined || k === 'seeds' || SPECIAL[k] || k === 'eye' || GUNIDX[k] !== undefined;
 const FUEL = { coal: 80, log: 15, planks: 7.5, stick: 5 };            // 燃焼秒数
@@ -383,9 +384,10 @@ const WEAPONS = [
   { id: 'magnum', name: 'マグナム', ammo: 'slugs', dmg: 24, mag: 6, rate: .5, auto: false, pellets: 1, spread: .003, move: .03, reload: 2.2, rec: .04, recH: .006, bloom: .004, range: 130, fov: 55, zoomK: .55 },
   { id: 'dmr', name: 'マークスマン', ammo: 'slugs', dmg: 22, mag: 10, rate: .3, auto: false, pellets: 1, spread: .0015, move: .05, reload: 2.4, rec: .03, recH: .006, bloom: .002, range: 190, fov: 32, zoomK: .35 },
   { id: 'lmg', name: '軽機関銃', ammo: 'ammo', dmg: 9, mag: 80, rate: .075, auto: true, pellets: 1, spread: .016, move: .05, reload: 4.4, rec: .012, recH: .008, bloom: .01, range: 130, fov: 52, zoomK: .55 },
+  { id: 'rpg', name: 'RPG-7', ammo: 'rockets', dmg: 0, mag: 1, rate: 1.1, auto: false, pellets: 1, spread: .002, move: .04, reload: 2.8, rec: .05, recH: .01, bloom: 0, range: 200, fov: 50, zoomK: .5 },
 ];
 const NW = WEAPONS.length;
-const AMMOJP = { ammo: '9mm弾', shells: '散弾', slugs: 'ライフル弾' };
+const AMMOJP = { ammo: '9mm弾', shells: '散弾', slugs: 'ライフル弾', rockets: 'ロケット弾' };
 
 // レシピ: rows=形あり(行の文字列, ' '=空)、list=形なし。3×3以内。大きいものは作業台が必要
 const RL = { V: 'bucket', L: 'log', P: 'planks', S: 'stick', C: 'cobble', K: 'coal', I: 'ingot', D: 'diamond', W: 'wool', E: 'leather', H: 'wheat', G: 'goldingot', X: 'stone', Q: 'glass', R: 'redstone', B: 'book', T: 'torch', N: 'sand', A: 'gravel', Y: 'string', F: 'feather', O: 'obsidian', Z: 'seeds', M: 'bone' };
@@ -437,6 +439,13 @@ function mkRecipes() {
   sh('マークスマン', ['IIQ', 'IPK', 'P  '], { weapon: 6 }, 'gun:6');
   sh('軽機関銃', ['III', 'KII', 'P R'], { weapon: 7 }, 'gun:7');
   sh('ボート', ['P P', 'PPP'], { give: { boat: 1 } }, 'item:boat');
+  sh('RPG-7', ['III', 'KPI', '  P'], { weapon: 8 }, 'gun:8');
+  ls('ロケット弾 ×3', ['cobble', 'coal', 'coal', 'coal'], { give: { rockets: 3 } }, 'item:rockets');
+  sh('TNT ×2', ['KNK', 'NKN', 'KNK'], { give: { tnt: 2 } }, 'item:tnt');
+  sh('自動採掘機', ['III', 'IRI', 'CPC'], { give: { miner: 1 } }, 'item:miner');
+  sh('レール ×12', ['I I', 'ISI', 'I I'], { give: { rail: 12 } }, 'item:rail');
+  sh('トロッコ', ['I I', 'III'], { give: { cart: 1 } }, 'item:cart');
+  sh('馬', ['EEH', 'EEE', 'S S'], { give: { horse: 1 } }, 'item:horse');
   return R;
 }
 const RECIPES = mkRecipes();
@@ -658,6 +667,11 @@ TILEFN[T.ENDSTONE] = (x, y) => { let c = jit([226, 224, 168], 9, x, y, 1001); if
 TILEFN[T.EFRAME_TOP] = (x, y) => { if (x < 2 || y < 2 || x > 13 || y > 13) return jit([24, 80, 70], 5, x, y, 1011); return Math.abs(x - 7.5) + Math.abs(y - 7.5) < 3 ? jit([20, 60, 50], 4, x, y, 1012) : jit([36, 110, 96], 7, x, y, 1013); };
 TILEFN[T.EFRAME_SIDE] = (x, y) => { if (y < 4) return jit([30, 100, 86], 6, x, y, 1021); return TILEFN[T.ENDSTONE](x, y); };
 TILEFN[T.BUTTON] = (x, y) => (x >= 5 && x <= 10 && y >= 6 && y <= 9) ? jit([140, 140, 146], 6, x, y, 1031) : null;
+TILEFN[T.TNT_SIDE] = (x, y) => { if (y >= 5 && y <= 10) return (y >= 6 && y <= 9 && ((x >= 2 && x <= 4) || (x >= 7 && x <= 8) || (x >= 11 && x <= 13))) ? jit([40, 30, 30], 5, x, y, 1041) : jit([226, 220, 206], 5, x, y, 1042); return jit([190, 40, 34], 10, x, y, 1043); };
+TILEFN[T.TNT_TOP] = (x, y) => (x >= 6 && x <= 9 && y >= 6 && y <= 9) ? jit([40, 40, 40], 4, x, y, 1044) : jit([196, 170, 120], 8, x, y, 1045);
+TILEFN[T.MINER_TOP] = (x, y) => (x >= 5 && x <= 10 && y >= 5 && y <= 10) ? jit([30, 30, 34], 4, x, y, 1051) : (x % 4 === 0 || y % 4 === 0) ? jit([80, 86, 92], 5, x, y, 1052) : jit([140, 148, 156], 6, x, y, 1053);
+TILEFN[T.MINER_SIDE] = (x, y) => (y === 2 || y === 13) ? jit([230, 150, 30], 8, x, y, 1054) : (x === 0 || x === 15) ? jit([60, 64, 70], 4, x, y, 1055) : (x >= 6 && x <= 9 && y >= 6 && y <= 9) ? jit([60, 64, 70], 4, x, y, 1056) : jit([128, 136, 146], 6, x, y, 1057);
+TILEFN[T.RAIL] = (x, y) => (x >= 3 && x <= 4) || (x >= 11 && x <= 12) ? jit([170, 172, 178], 6, x, y, 1061) : (x >= 2 && x <= 13 && (y % 5 === 1 || y % 5 === 2)) ? jit([112, 82, 46], 6, x, y, 1062) : null;
 
 const tileCanvas = [], tileAvg = [];
 for (let i = 0; i < T.NTILES; i++) {
@@ -822,7 +836,8 @@ function drawGunIcon(x, k) {
   else if (k === 4) { R(d, 4, 11, 24, 5); R(m, 8, 9, 12, 6); R(d, 12, 16, 4, 10); R(d, 18, 16, 3, 6); R(l, 26, 12, 5, 2); R(d, 0, 11, 5, 6); }
   else if (k === 5) { R(l, 5, 8, 24, 5); R(m, 5, 13, 16, 4); R(w, 6, 17, 6, 9); R(d, 18, 13, 6, 6); R(l, 26, 9, 5, 2); }
   else if (k === 6) { R(d, 0, 13, 31, 4); R(m, 8, 11, 14, 6); R(d, 10, 6, 14, 4); R(l, 9, 5, 2, 6); R(w, 0, 12, 8, 8); R(d, 13, 17, 3, 8); R(l, 28, 12, 4, 3); }
-  else { R(d, 0, 12, 31, 5); R(m, 8, 10, 14, 8); R(d, 14, 18, 10, 10); R(d, 26, 17, 2, 8); R(d, 28, 12, 3, 4); R(w, 0, 11, 7, 8); }
+  else if (k === 7) { R(d, 0, 12, 31, 5); R(m, 8, 10, 14, 8); R(d, 14, 18, 10, 10); R(d, 26, 17, 2, 8); R(d, 28, 12, 3, 4); R(w, 0, 11, 7, 8); }
+  else { R(d, 2, 13, 26, 4); R(m, 24, 10, 6, 10); R(l, 0, 12, 5, 6); R(w, 10, 17, 3, 7); R(d, 4, 10, 6, 3); }
 }
 
 
@@ -842,6 +857,9 @@ function drawItemIcon(x, k) {
   if (/^g\d$/.test(k)) { drawGunIcon(x, +k[1]); return; }
   const R = (c, a, b, w, h) => { x.fillStyle = c; x.fillRect(a, b, w, h); };
   if (ITEMB[k] !== undefined) { const b = ITEMB[k]; if (CUBE[b]) drawCubeIcon(x, BTILE[b][0], BTILE[b][1]); else x.drawImage(tileCanvas[BTILE[b][0]], 0, 0, 32, 32); return; }
+  if (k === 'cart') { R('#6a6f78', 5, 14, 22, 10); R('#3a3d42', 6, 16, 20, 6); R('#222', 8, 25, 4, 4); R('#222', 20, 25, 4, 4); return; }
+  if (k === 'horse') { R('#8b5a2b', 6, 12, 18, 9); R('#8b5a2b', 20, 6, 6, 9); R('#5a3a1a', 24, 6, 3, 5); R('#5a3a1a', 7, 21, 3, 8); R('#5a3a1a', 20, 21, 3, 8); return; }
+  if (k === 'rockets') { R('#4a5a3a', 13, 5, 6, 16); R('#b0382a', 12, 2, 8, 5); R('#777', 11, 21, 10, 3); R('#777', 9, 24, 14, 2); return; }
   if (k === 'boat') { R('#6b4d26', 4, 18, 24, 8); R('#9c7a46', 6, 14, 20, 6); R('#9c7a46', 4, 12, 3, 8); R('#9c7a46', 25, 12, 3, 8); R('#5a3f1e', 8, 22, 16, 2); return; }
   if (k === 'coal') { R('#222', 8, 8, 16, 16); R('#2e2e32', 10, 6, 12, 20); R('#555', 11, 10, 4, 4); }
   else if (k === 'iron') { const b = B.IRON; drawCubeIcon(x, BTILE[b][0], BTILE[b][1]); }
@@ -1174,6 +1192,10 @@ function buildChunk(ci) {
         box(S, x + R[0], y + R[1], z + R[2], x + R[3], y + R[4], z + R[5], full, sky, blk, false, false);
       } else if (isDust(b)) {
         const l = [sky, blk, 1]; quad(S, [[x, y + .02, z + 1], [x + 1, y + .02, z + 1], [x + 1, y + .02, z], [x, y + .02, z]], [[tt[0], tt[1]], [tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]]], [l, l, l, l], false);
+      } else if (b === B.RAIL) {
+        const l = [sky, blk, 1], ax = (getB(x - 1, y, z) === B.RAIL || getB(x + 1, y, z) === B.RAIL) && !(getB(x, y, z - 1) === B.RAIL || getB(x, y, z + 1) === B.RAIL);
+        const uv = ax ? [[tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]], [tt[0], tt[1]]] : [[tt[0], tt[1]], [tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]]];
+        quad(S, [[x, y + .02, z + 1], [x + 1, y + .02, z + 1], [x + 1, y + .02, z], [x, y + .02, z]], uv, [l, l, l, l], false);
       } else if (isLever(b)) {
         box(S, x + 4 / 16, y, z + 4 / 16, x + 12 / 16, y + 3 / 16, z + 12 / 16, sub(4, 12, 12, 16), sky, blk, false, true);
         const on = b === B.LEVER1; box(S, x + (on ? 10 : 4) / 16, y + 3 / 16, z + 7 / 16, x + (on ? 12 : 6) / 16, y + 11 / 16, z + 9 / 16, sub(7, 2, 9, 10), sky, blk, false, true);
@@ -1246,6 +1268,7 @@ function resetChunks() {
 function applyBlock(x, y, z, b, batch) {
   if (!inb(x, y, z)) return false; const i = bidx(x, y, z); if (blocks[i] === b) return false;
   blocks[i] = b; edits.set(i, b);
+  if (b === B.MINER) miners.set(i, { x, y, z, t: 0, d: 1, k: 0 }); else if (miners.size && miners.has(i)) miners.delete(i);
   if (net.role !== 'guest') { fallEnqueue(x, y, z); fluidEnqueue(x, y, z); rsEnqueue(x, y, z); }
   if (!batch) { relight(x - 16, z - 16, x + 16, z + 16, true); markAround(x, z); }
   return true;
@@ -1594,11 +1617,12 @@ function buildGunModel0(k) {
 }
 function buildGunModel(k) {
   if (k < 4) return buildGunModel0(k);
-  const m = buildGunModel0([0, 0, 1, 1][k - 4]), g = m.group, P = m.parts;
+  const m = buildGunModel0(k === 8 ? 3 : [0, 0, 1, 1][k - 4]), g = m.group, P = m.parts;
   if (k === 4) { cy(g, .018, .12, 0, .03, -.29, GM.dark); bx(P.mag, .026, .08, .036, 0, -.2, .014, GM.metal, .18); bx(g, .03, .05, .12, 0, 0, .1, GM.poly); bx(g, .03, .07, .03, 0, -.06, -.12, GM.dark); P.muzzle.position.z = -.36; }   // SMG: 消音器/延長マガジン/ストック
   else if (k === 5) { cy(g, .014, .16, 0, .03, -.3, GM.steel); bx(g, .022, .022, .16, 0, .05, -.28, GM.steel); P.muzzle.position.z = -.4; P.kick = .06; }   // マグナム: 長銃身
   else if (k === 6) { cy(g, .02, .17, 0, .09, -.16, GM.dark); cy(g, .026, .05, 0, .09, -.26, GM.dark); bx(g, .014, .03, .02, 0, .065, -.2, GM.metal); bx(g, .014, .03, .02, 0, .065, -.1, GM.metal); cy(g, .022, .004, 0, .09, -.305, GM.glass, undefined, 0x0b3a4a); P.sight = (P.sight || .1) + .035; }   // DMR: スコープ
-  else { bx(g, .08, .1, .1, 0, -.1, -.08, GM.dark); bx(g, .01, .09, .01, -.03, -.05, -.62, GM.dark, .35); bx(g, .01, .09, .01, .03, -.05, -.62, GM.dark, .35); cy(g, .016, .2, 0, .02, -.62, GM.steel); P.muzzle.position.z -= .1; }   // LMG: ドラム/バイポッド
+  else if (k === 7) { bx(g, .08, .1, .1, 0, -.1, -.08, GM.dark); bx(g, .01, .09, .01, -.03, -.05, -.62, GM.dark, .35); bx(g, .01, .09, .01, .03, -.05, -.62, GM.dark, .35); cy(g, .016, .2, 0, .02, -.62, GM.steel); P.muzzle.position.z -= .1; }   // LMG: ドラム/バイポッド
+  else { cy(g, .045, .9, 0, .04, -.2, GM.dark); cy(g, .07, .16, 0, .04, -.74, GM.metal); cy(g, .055, .1, 0, .04, .3, GM.steel); bx(g, .02, .05, .02, 0, .1, -.1, GM.dark); P.muzzle.position.z = -.85; }   // RPG-7: 発射筒+弾頭
   return m;
 }
 // ---- 一人称 ----
@@ -1819,7 +1843,7 @@ function spat(pos, maxD) {
 }
 const SND = {
   shot(k, pos) {
-    if (k >= 4) k = [0, 2, 3, 1][k - 4];
+    if (k >= 4) k = [0, 2, 3, 1, 3][k - 4];
     if (!AUD.ctx) return; const s = spat(pos, 160); if (s.v < .01) return; const v = s.v, p = s.pan;
     if (k === 0) { nz({ type: 'bandpass', f0: 2600, f1: 900, q: .7, dur: .13, vol: .55 * v, pan: p, rev: .5 }); osc({ wave: 'triangle', f0: 190, f1: 50, dur: .12, vol: .5 * v, pan: p }); nz({ type: 'highpass', f0: 5000, dur: .03, vol: .3 * v, pan: p }); }
     else if (k === 1) { nz({ type: 'bandpass', f0: 3000, f1: 700, q: .6, dur: .16, vol: .6 * v, pan: p, rev: .55 }); osc({ wave: 'triangle', f0: 150, f1: 40, dur: .15, vol: .6 * v, pan: p }); nz({ type: 'highpass', f0: 4500, dur: .035, vol: .35 * v, pan: p }); }
@@ -1829,7 +1853,7 @@ const SND = {
   click(v = .3) { nz({ type: 'highpass', f0: 3000, dur: .03, vol: v }); osc({ wave: 'square', f0: 900, f1: 500, dur: .02, vol: v * .25 }); },
   dryfire() { this.click(.4); },
   reload(k) {
-    if (k >= 4) k = [0, 1, 1, 1][k - 4];
+    if (k >= 4) k = [0, 1, 1, 1, 1][k - 4];
     nz({ type: 'bandpass', f0: 1800, q: 2, dur: .05, vol: .3 }); osc({ wave: 'square', f0: 260, f1: 140, dur: .06, vol: .15 });
     const T = [0, 0, 0, 0][k] + (k === 2 ? 0 : .55); setTimeout(() => { nz({ type: 'bandpass', f0: 1400, q: 2, dur: .06, vol: .4 }); osc({ wave: 'square', f0: 200, f1: 100, dur: .07, vol: .2 }); }, T * 1000);
   },
@@ -2309,6 +2333,7 @@ function updateRod(dt) {
 // ============================================================
 function useFlint() {
   const r = target(); if (!r) return;
+  if (r.b === B.TNT) { primeTnt(r.x, r.y, r.z, 3.2); SND.click(.8); return; }
   if (r.b === B.OBSIDIAN && tryPortal(r)) { SND.click(.8); return; }
   if (r.b === B.EFRAME) { feedMsg('エンダーアイを使おう'); return; }
   feedMsg('黒曜石の枠に使うとネザーゲートが開く');
@@ -2439,7 +2464,7 @@ try { Object.assign(SET, JSON.parse(localStorage.getItem('nc-settings') || '{}')
 const P = {
   x: W / 2, y: 40, z: D / 2, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, onGround: false, hp: 20, hunger: 20, sat: 5, exh: 0, air: 12, dead: false, deadT: 0, sel: 0, swT: 0,
   inv: Object.fromEntries(ITEMKEYS.map(k => [k, 0])),
-  has: [true, false, false, false, false, false, false, false], mag: [12, 30, 6, 5, 32, 6, 10, 80],
+  has: [true, false, false, false, false, false, false, false, false], mag: [12, 30, 6, 5, 32, 6, 10, 80, 1],
   tools: { pick: 0, axe: 0, shovel: 0, sword: 0 }, dur: { pick: 0, axe: 0, shovel: 0, sword: 0 }, armor: 0, xp: 0, lvl: 0, slots: DEFSLOTS.slice(), slot: 0, spawn: null,
   get sel() { const k = this.slots[this.slot]; return GUNIDX[k] !== undefined ? GUNIDX[k] : NW; },
   ench: { pick: 0, axe: 0, shovel: 0, sword: 0, armor: 0 }, cd: 0, reloadT: 0, reloadK: -1, cycleT: 0, adsT: 0, ads: false, bloom: 0, rec: 0, kick: 0, flashT: 0, regen: 0, starve: 0, drown: 0, stepAcc: 0, sprint: false, swim: false, headW: false, swayY: 0, swayP: 0, bobT: 0,
@@ -2616,6 +2641,7 @@ function tryFire(first) {
   else sp *= lerp(1, .4, P.adsT);
   const ends = []; let hits = 0, head = false, killed = false;
   const mz = muzzleWorld(k);
+  if (w.id === 'rpg') { launchRocket(o, base, mz); SND.shot(k); P.pitch += .05; P.shake = .35; updateHUD(); if (P.mag[k] <= 0 && ammoFor(k) > 0) setTimeout(() => { if (P.sel === k) startReload(); }, 600); return; }
   for (let i = 0; i < w.pellets; i++) {
     const ang = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * sp;
     const dir = base.clone().addScaledVector(right, Math.cos(ang) * rr).addScaledVector(up, Math.sin(ang) * rr).normalize();
@@ -2716,7 +2742,7 @@ function breakBlockAt(x, y, z, mine) {
     if (ok) { if (!(isDoor(b) && doorTop(b))) dropsFor(b, x, y, z); if (XPORE[b]) addXp(XPORE[b] + (Math.random() * XPORE[b] | 0)); }
     else if (REQ[b]) feedMsg('この道具では採掘できない(' + (TIERJP[REQ[b]] + TOOLJP[ty]) + 'が必要)');
   }
-  const up = getB(x, y + 1, z); if (isPlant(up) || up === B.TORCH || isDust(up) || isLever(up) || isButton(up) || up === B.RSTORCH0 || up === B.RSTORCH1) breakBlockAt(x, y + 1, z, mine);
+  const up = getB(x, y + 1, z); if (isPlant(up) || up === B.TORCH || isDust(up) || up === B.RAIL || isLever(up) || isButton(up) || up === B.RSTORCH0 || up === B.RSTORCH1) breakBlockAt(x, y + 1, z, mine);
   updateHUD();
 }
 function blockedBy(x, y, z, b) {
@@ -2729,7 +2755,7 @@ function placeBlock(key) {
   const r = target(); if (!r || P.dead) return false; const b = ITEMB[key]; if (b === undefined || !P.inv[key]) return false;
   let x = r.x + r.nx, y = r.y + r.ny, z = r.z + r.nz;
   const cur = getB(x, y, z); if (!inb(x, y, z) || (cur && !isFluid(cur) && !isPlant(cur))) { if (isPlant(getB(r.x, r.y, r.z))) { x = r.x; y = r.y; z = r.z; } else return false; }
-  if (b === B.TORCH || isDust(b) || isLever(b) || isButton(b) || b === B.RSTORCH1 || b === B.RSTORCH0) { if (!SOLIDB[getB(x, y - 1, z)] || !CUBE[getB(x, y - 1, z)]) { feedMsg('固いブロックの上に置けます'); return false; } }
+  if (b === B.TORCH || b === B.RAIL || isDust(b) || isLever(b) || isButton(b) || b === B.RSTORCH1 || b === B.RSTORCH0) { if (!SOLIDB[getB(x, y - 1, z)] || !CUBE[getB(x, y - 1, z)]) { feedMsg('固いブロックの上に置けます'); return false; } }
   if (blockedBy(x, y, z, b)) return false;
   P.inv[key]--; applyBlock(x, y, z, b); netSend({ t: 'block', x, y, z, b }); SND.place(); P.kick = Math.max(P.kick, .4); updateHUD(); return true;
 }
@@ -2749,7 +2775,7 @@ function eat(k) {
   const f = FOOD[k]; P.inv[k]--; P.hunger = Math.min(20, P.hunger + f[0]); P.sat = Math.min(P.hunger, P.sat + f[1]); P.eatT = .6; SND.eat(); updateHUD(); return true;
 }
 function swing() {
-  if (P.atkCd > 0 || P.dead || P.sel < NW) return false; if ((!TOUCH || joy.sneak) && hitBoat()) return true;
+  if (P.atkCd > 0 || P.dead || P.sel < NW) return false; if ((!TOUCH || joy.sneak) && (hitBoat() || hitVeh())) return true;
   const o = eyePos().clone(), d = aimDir().clone(), r = trace(o, d, 3.4);
   if (r.type !== 'mob' && r.type !== 'player') return false;
   P.atkCd = .5; P.swT = 1; const ty = 'sword', t = P.tools.sword; let dmg = SWORDDMG[t] + (P.ench.sword || 0) * 1.25;
@@ -2789,7 +2815,7 @@ function interact() {
   return false;
 }
 function rightClick() {
-  if (P.dead || P.sel < NW) return; if (interact()) return; if (tryBoat()) return;
+  if (P.dead || P.sel < NW) return; if (interact()) return; if (tryBoat()) return; if (tryVeh()) return;
   { const k0 = P.slots[P.slot]; if (k0 && FOOD[k0]) return; }                      // 食べ物は長押しで食べる
   const k = P.slots[P.slot]; if (!k || !P.inv[k]) return;
   if (k === 'bucket' || k === 'wbucket' || k === 'lbucket') bucketUse(); else if (k === 'door') placeDoor(); else if (k === 'rod') useRod(); else if (k === 'fas') useFlint(); else if (k === 'eye') useEye();
@@ -2871,7 +2897,7 @@ function giveLoot(by, loot, p) {
 }
 function lightLevelAt(x, y, z) { return Math.max(skyAt(x, y, z) / 15 * env.sun, blkAt(x, y, z) / 15); }
 function hurtTarget(t, dmg, src, by) { if (t.id === net.id) hurt(dmg, src, by); else { const c = net.conns.get(t.id); c && c.open && c.send({ t: 'dmg', dmg, src, by }); } }
-function explodeAt(x, y, z, r, by) {
+function explodeAt0(x, y, z, r, by) {
   const l = []; let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
   for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
     const d = Math.hypot(dx, dy, dz); if (d > r) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz, b = getB(bx, by_, bz);
@@ -2882,6 +2908,13 @@ function explodeAt(x, y, z, r, by) {
   boomFx(x, y, z); netSend({ t: 'boom', x, y, z }); if (l.length) netSend({ t: 'blocks', l });
   for (const t of allTargets()) { const d = Math.hypot(t.x - x, t.y + 1 - y, t.z - z); if (d < r * 2) hurtTarget(t, Math.round((1 - d / (r * 2)) * 24), { x, y, z }, by); }
   for (const m of [...mobs.values()]) { const d = Math.hypot(m.x - x, m.y - y, m.z - z); if (d < r * 2 && m.type !== 'creeper') damageMob(m.id, (1 - d / (r * 2)) * 20, null, false, { x, z }); }
+}
+function explodeAt(x, y, z, r, by) {   // 爆風圏内のTNTは連鎖して着火する
+  const R2 = r + 1; for (let dx = -R2; dx <= R2; dx++) for (let dy = -R2; dy <= R2; dy++) for (let dz = -R2; dz <= R2; dz++) {
+    if (dx * dx + dy * dy + dz * dz > R2 * R2) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz;
+    if (getB(bx, by_, bz) === B.TNT) primeTnt(bx, by_, bz, .25 + Math.random() * .6);
+  }
+  explodeAt0(x, y, z, r, by);
 }
 function boomFx(x, y, z) { burst(x, y, z, 50, [.9, .6, .2], 9, .22, .9, 6); burst(x, y, z, 40, [.3, .3, .3], 6, .3, 1.4, -1); SND.boom({ x, y, z }); P.shake = Math.max(P.shake, Math.max(0, 1 - Math.hypot(P.x - x, P.z - z) / 20) * .8); }
 function losClear(a, b) { const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, l = Math.hypot(dx, dy, dz) || 1, r = rayBlocks(a, { x: dx / l, y: dy / l, z: dz / l }, l, 1); return !r || r.t >= l - .5; }
@@ -3037,6 +3070,135 @@ function updateBoats(dt) {
     }
     moveBody(b, dt); b.mesh.position.set(b.x, b.y, b.z); b.mesh.rotation.y = b.yaw; b.mesh.rotation.z = Math.sin(animT * 2 + b.x) * .03 * (inW ? 1 : 0);
     if (b.rider && P.boat === b) { P.x = b.x; P.y = b.y + .3; P.z = b.z; P.vx = P.vy = P.vz = 0; }
+  }
+}
+// ---------- RPG-7 ロケット ----------
+const rockets = [];
+function launchRocket(o, dir, mz) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .5, 8), new THREE.MeshLambertMaterial({ color: 0x4a5a3a })), tip = new THREE.Mesh(new THREE.ConeGeometry(.08, .2, 8), new THREE.MeshLambertMaterial({ color: 0xb0382a }));
+  tip.position.y = .35; mesh.add(tip); scene.add(mesh);
+  rockets.push({ x: mz.x, y: mz.y, z: mz.z, vx: dir.x * 55 + P.vx, vy: dir.y * 55, vz: dir.z * 55 + P.vz, t: 0, mesh });
+}
+function updateRockets(dt) {
+  for (let i = rockets.length - 1; i >= 0; i--) {
+    const r = rockets[i]; r.t += dt; r.vy -= 4 * dt;
+    const nx = r.x + r.vx * dt, ny = r.y + r.vy * dt, nz = r.z + r.vz * dt;
+    let hit = r.t > 8 || ny < 0 || solidAt(Math.floor(nx), Math.floor(ny), Math.floor(nz));
+    if (!hit) for (const m of mobs.values()) if (Math.abs(m.x - nx) < (m.hw || .4) + .4 && Math.abs(m.z - nz) < (m.hw || .4) + .4 && ny > m.y - .3 && ny < m.y + (m.h || 1.8) + .3) { hit = true; break; }
+    if (hit) { scene.remove(r.mesh); rockets.splice(i, 1); explodeAt(r.x, r.y, r.z, 4, null); continue; }
+    r.x = nx; r.y = ny; r.z = nz; r.mesh.position.set(nx, ny, nz); r.mesh.lookAt(nx + r.vx, ny + r.vy, nz + r.vz); r.mesh.rotateX(Math.PI / 2);
+    if (Math.random() < .8) burst(nx, ny, nz, 1, [.85, .85, .85], .6, .1, .7, -1);
+  }
+}
+// ---------- TNT ----------
+const tnts = [];
+function primeTnt(x, y, z, fuse) {
+  if (getB(x, y, z) === B.TNT) { applyBlock(x, y, z, 0); netSend({ t: 'block', x, y, z, b: 0 }); }
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(.98, .98, .98), new THREE.MeshLambertMaterial({ color: 0xc02a22 })); mesh.position.set(x + .5, y + .5, z + .5); scene.add(mesh);
+  tnts.push({ x: x + .5, y: y + .5, z: z + .5, vy: 0, t: fuse, mesh });
+}
+function updateTnt(dt) {
+  for (let i = tnts.length - 1; i >= 0; i--) {
+    const e = tnts[i]; e.t -= dt;
+    if (!solidAt(Math.floor(e.x), Math.floor(e.y - .5 + e.vy * dt), Math.floor(e.z))) { e.vy -= 22 * dt; e.y += e.vy * dt; } else if (e.vy < 0) { e.vy = 0; e.y = Math.floor(e.y - .5) + 1.5; }
+    e.mesh.position.set(e.x, e.y, e.z); e.mesh.material.emissive.setHex(Math.floor(e.t * 6) % 2 ? 0xffffff : 0x000000); e.mesh.scale.setScalar(1 + Math.max(0, .5 - e.t) * .25);
+    if (e.t <= 0) { scene.remove(e.mesh); tnts.splice(i, 1); explodeAt(e.x, e.y, e.z, 5, null); }
+  }
+}
+// ---------- 自動採掘機: 真下を5x5で上から順に掘り進む(近くにいる間だけ動く)。掘った物は機械の上に出る ----------
+const miners = new Map();
+function updateMiners(dt) {
+  if (net.role === 'guest' || !miners.size || P.dead) return;
+  for (const [i, m] of miners) {
+    if (blocks[i] !== B.MINER) { miners.delete(i); continue; }
+    if (Math.hypot(m.x - P.x, m.z - P.z) > 60) continue;
+    m.t -= dt; if (m.t > 0) continue; m.t = .45;
+    for (let tries = 0; tries < 30; tries++) {
+      if (m.d > 40) { m.t = 5; break; }
+      const x = m.x + (m.k % 5) - 2, z = m.z + Math.floor(m.k / 5) - 2, y = m.y - m.d; m.k++; if (m.k >= 25) { m.k = 0; m.d++; }
+      if (y < 1) { m.d = 99; break; }
+      const b = getB(x, y, z); if (!b || b === B.BEDROCK || isFluid(b) || b === B.MINER || b === B.CHEST || b === B.FURNACE) continue;
+      breakBlockAt(x, y, z, false); dropsFor(b, m.x, m.y + 1, m.z); break;
+    }
+  }
+}
+// ---------- 乗り物: 馬・トロッコ(レールの上を走る。1段の坂も登る) ----------
+const vehs = [];
+function makeHorseMesh() {
+  const g = new THREE.Group(), br = new THREE.MeshLambertMaterial({ color: 0x8b5a2b }), dk = new THREE.MeshLambertMaterial({ color: 0x3f2814 }), rd = new THREE.MeshLambertMaterial({ color: 0x9a2a22 });
+  const add = (par, w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); par.add(q); return q; };
+  add(g, .6, .62, 1.2, 0, 1.0, 0, br); add(g, .62, .08, .5, 0, 1.34, .05, rd);
+  const neck = new THREE.Group(); neck.position.set(0, 1.2, -.55); neck.rotation.x = -.5; add(neck, .26, .7, .3, 0, .3, 0, br); add(neck, .08, .6, .1, 0, .34, .17, dk);
+  const head = new THREE.Group(); head.position.set(0, .68, -.02); head.rotation.x = .75; add(head, .26, .3, .55, 0, 0, -.2, br); add(head, .1, .12, .1, 0, -.06, -.5, dk); add(head, .06, .14, .06, -.08, .2, 0, dk); add(head, .06, .14, .06, .08, .2, 0, dk); neck.add(head); g.add(neck);
+  add(g, .1, .1, .7, 0, 1.05, .85, dk).rotation.x = .6;
+  const legs = []; for (const [lx, lz] of [[-.2, -.45], [.2, -.45], [-.2, .45], [.2, .45]]) { const lg = new THREE.Group(); lg.position.set(lx, .7, lz); add(lg, .17, .7, .17, 0, -.35, 0, br); add(lg, .19, .12, .19, 0, -.7, 0, dk); g.add(lg); legs.push(lg); }
+  g.userData.legs = legs; return g;
+}
+function makeCartMesh() {
+  const g = new THREE.Group(), m1 = new THREE.MeshLambertMaterial({ color: 0x8a9099 }), m2 = new THREE.MeshLambertMaterial({ color: 0x3a3d42 });
+  const add = (w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); g.add(q); };
+  add(.8, .08, 1.0, 0, .22, 0, m2); add(.06, .4, 1.0, -.37, .42, 0, m1); add(.06, .4, 1.0, .37, .42, 0, m1); add(.8, .4, .06, 0, .42, .47, m1); add(.8, .4, .06, 0, .42, -.47, m1);
+  for (const [x, z] of [[-.3, -.35], [.3, -.35], [-.3, .35], [.3, .35]]) add(.1, .2, .2, x, .1, z, m2);
+  return g;
+}
+function spawnVeh(kind, x, y, z, yaw, dx, dz) { const mesh = kind === 'horse' ? makeHorseMesh() : makeCartMesh(); scene.add(mesh); const v = { kind, x, y, z, vx: 0, vy: 0, vz: 0, yaw: yaw || 0, hw: kind === 'horse' ? .45 : .4, h: kind === 'horse' ? 1.5 : .6, mesh, rider: false, mt: 0, anim: 0, dx: dx || 0, dz: dz === undefined ? 1 : dz, v: 0, cy: Math.floor(y) }; vehs.push(v); return v; }
+function lookHitVeh(maxD) {
+  const e = eyePos(), l = lookDir(); let best = null, bd = 1e9;
+  for (const v of vehs) { const dx = v.x - e.x, dy = v.y + (v.kind === 'horse' ? .9 : .3) - e.y, dz = v.z - e.z, d = Math.hypot(dx, dy, dz); if (d > maxD) continue; const dot = (dx * l.x + dy * l.y + dz * l.z) / d; if (dot > .93 && d < bd) { bd = d; best = v; } }
+  return best;
+}
+function tryVeh() {
+  if (P.boat) return true;
+  const v = lookHitVeh(4); if (v && !v.rider) { v.rider = true; v.mt = .5; P.boat = v; feedMsg(v.kind === 'horse' ? '馬に乗った(W:進む Ctrl:ダッシュ Space:ジャンプ Shift:降りる)' : 'トロッコに乗った(W/S:進む・戻る Shift:降りる)', 'good'); return true; }
+  const key = P.slots[P.slot]; if ((key !== 'horse' && key !== 'cart') || !P.inv[key]) return false;
+  const r = target(); if (!r) return false;
+  if (key === 'cart') { if (r.b !== B.RAIL) { feedMsg('レールの上に置けます'); return true; } const ax = getB(r.x - 1, r.y, r.z) === B.RAIL || getB(r.x + 1, r.y, r.z) === B.RAIL; spawnVeh('cart', r.x + .5, r.y, r.z + .5, 0, ax ? 1 : 0, ax ? 0 : 1); }
+  else { const x = r.x + r.nx, y = r.y + r.ny, z = r.z + r.nz; if (SOLIDB[getB(x, y, z)] || SOLIDB[getB(x, y + 1, z)]) return true; spawnVeh('horse', x + .5, y, z + .5, P.yaw); }
+  P.inv[key]--; SND.place(); updateHUD(); return true;
+}
+function hitVeh() { if (P.boat) return false; const v = lookHitVeh(4); if (!v) return false; scene.remove(v.mesh); vehs.splice(vehs.indexOf(v), 1); P.inv[v.kind] = (P.inv[v.kind] || 0) + 1; updateHUD(); return true; }
+function railY(x, y, z) { for (const dy of [0, 1, -1]) if (getB(x, y + dy, z) === B.RAIL) return y + dy; return null; }
+function updateVehicles(dt) {
+  for (const v of vehs) {
+    v.mt = Math.max(0, v.mt - dt);
+    const mine = v.rider && P.boat === v; if (v.rider && P.dead) { v.rider = false; P.boat = null; }
+    const act = mine && locked && !craftOpen && !chatOpen, fw = act ? clamp((keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + joy.y, -1, 1) : 0;
+    if (v.kind === 'horse') {
+      if (waterAt(v.x, v.y + .5, v.z)) { const sb = subm(v.x, v.y, v.z, 1.5); v.vy += (-8 + 12 * sb) * dt - v.vy * 1.8 * dt; } else v.vy -= 24 * dt;
+      if (mine) {
+        let d = P.yaw - v.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); v.yaw += d * Math.min(1, 6 * dt);
+        const st = act ? clamp((keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, -1, 1) : 0, top = (keys.ControlLeft || joy.sprint) ? 14 : 10;
+        v.vx = lerp(v.vx, (-Math.sin(v.yaw) * fw + Math.cos(v.yaw) * st * .5) * top, Math.min(1, 4 * dt)); v.vz = lerp(v.vz, (-Math.cos(v.yaw) * fw - Math.sin(v.yaw) * st * .5) * top, Math.min(1, 4 * dt));
+        if (act && keys.Space && v.onGround) v.vy = 8.6;
+        if (v.blocked && v.onGround && fw > 0) v.vy = 7.4;
+      } else { v.vx *= 1 - 6 * dt; v.vz *= 1 - 6 * dt; }
+      moveBody(v, dt);
+      const sp = Math.hypot(v.vx, v.vz); v.anim += sp * dt * 1.8; const lg = v.mesh.userData.legs, sw = Math.sin(v.anim) * Math.min(.9, sp * .12);
+      lg[0].rotation.x = sw; lg[3].rotation.x = sw; lg[1].rotation.x = -sw; lg[2].rotation.x = -sw;
+      v.mesh.position.set(v.x, v.y, v.z); v.mesh.rotation.y = v.yaw;
+      if (mine) { P.x = v.x; P.y = v.y + .95; P.z = v.z; P.vx = P.vy = P.vz = 0; }
+    } else {
+      if (mine) v.v = clamp(v.v + fw * 9 * dt, -9, 9); v.v *= 1 - (mine && fw ? .1 : .6) * dt;
+      let sign = Math.sign(v.v), left = Math.abs(v.v * dt);
+      while (left > 1e-6) {
+        const step = Math.min(left, .2); left -= step;
+        const nx = v.x + v.dx * sign * step, nz = v.z + v.dz * sign * step, cx = Math.floor(v.x), cz = Math.floor(v.z), ncx = Math.floor(nx), ncz = Math.floor(nz);
+        if (ncx === cx && ncz === cz) { v.x = nx; v.z = nz; continue; }
+        const ry = railY(ncx, v.cy, ncz);
+        if (ry !== null) { v.cy = ry; v.x = nx; v.z = nz; continue; }
+        let turned = false;
+        for (const [px, pz] of [[v.dz, v.dx], [-v.dz, -v.dx]]) { if (!px && !pz) continue; if (railY(cx + px, v.cy, cz + pz) !== null) { v.dx = px * sign; v.dz = pz * sign; v.v = Math.abs(v.v); sign = 1; v.x = cx + .5; v.z = cz + .5; turned = true; break; } }
+        if (!turned) { v.v = 0; break; }
+      }
+      if (v.dx) v.z += (Math.floor(v.z) + .5 - v.z) * Math.min(1, 12 * dt); else v.x += (Math.floor(v.x) + .5 - v.x) * Math.min(1, 12 * dt);
+      v.y += (v.cy + .06 - v.y) * Math.min(1, 10 * dt);
+      v.mesh.position.set(v.x, v.y, v.z); v.mesh.rotation.y = v.dx ? Math.PI / 2 : 0;
+      if (mine) { P.x = v.x; P.y = v.y + .35; P.z = v.z; P.vx = P.vy = P.vz = 0; }
+    }
+    if (mine && (keys.ShiftLeft || keys.ShiftRight || joy.sneak) && v.mt <= 0) {
+      v.rider = false; P.boat = null; P.x = v.x + 1.2; P.z = v.z; P.y = v.y + 1; P.vy = 0;
+      if (collides(P.x, P.y, P.z, PW, PH)) { P.x = v.x; P.z = v.z; P.y = v.y + 1.3; }
+    }
   }
 }
 // ================= ネットワーク =================
@@ -3302,7 +3464,7 @@ function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; fpsAcc += dt; fpsN++; if (fpsAcc > .5) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
   if (started) {
     animT += dt; if (net.role !== 'guest') worldTime += dt;
-    updatePlayer(dt); updateBoats(dt); if (net.role !== 'guest') { simMobs(dt); simFurnaces(dt); growCrops(dt); stepFalls(dt); stepFluids(dt); stepRedstone(dt); } updateEntities(dt); updateDrops(dt); updateWeather(dt); updateButtons(dt); updateRod(dt); updatePortals(dt);
+    updatePlayer(dt); updateBoats(dt); updateVehicles(dt); updateRockets(dt); updateTnt(dt); updateMiners(dt); if (net.role !== 'guest') { simMobs(dt); simFurnaces(dt); growCrops(dt); stepFalls(dt); stepFluids(dt); stepRedstone(dt); } updateEntities(dt); updateDrops(dt); updateWeather(dt); updateButtons(dt); updateRod(dt); updatePortals(dt);
     streamT -= dt; if (streamT <= 0) { streamT = .4; streamChunks(false); } processDirty(TOUCH ? 2 : 4, TOUCH ? 6 : 10);
     updateView(dt); updateFx(dt);
     if (vmFlash.visible === false) { }
@@ -3322,6 +3484,7 @@ async function beginGame(m) {
   genWorld(m.seed); ents.clear(); for (const d of drops) scene.remove(d.spr); drops.length = 0; fallQ.clear();
   if (m.ents) for (const [i, d] of m.ents) ents.set(i, d); rainTarget = m.rain || 0; rainLvl = rainTarget;
   const ed = m.edits || []; for (let i = 0; i < ed.length; i += 2) { blocks[ed[i]] = ed[i + 1]; edits.set(ed[i], ed[i + 1]); }
+  miners.clear(); for (const [i, bb] of edits) if (bb === B.MINER) { const x = i % W, z = Math.floor(i / W) % D, y = Math.floor(i / (W * D)); miners.set(i, { x, y, z, t: 0, d: 1, k: 0 }); }
   setLoad(.3, '光を計算中…'); await tick(); fullRelight();
   setLoad(.5, 'メッシュを構築中…'); await tick(); resetChunks();
   if (m.player) { P.x = m.player.x; P.y = m.player.y; P.z = m.player.z; } else { const s0 = findSpawn(W / 2, D / 2, 16); P.x = s0[0]; P.y = s0[1]; P.z = s0[2]; }
