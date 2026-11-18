@@ -157,11 +157,11 @@ body.touch #itemname{bottom:100px}
 .cg .cell:active{background:rgba(95,211,141,.25)}.cell img,.res img{width:38px;height:38px}.cell i,.res i{position:absolute;right:3px;bottom:0;font-style:normal;font-size:12px;font-weight:800;text-shadow:0 1px 2px #000}
 .cwrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:6px 0 12px}.arrow{font-size:28px;opacity:.7}.res{width:70px;height:70px;border-color:#ffd166}.res.ok{background:rgba(95,211,141,.22)}
 .chip.hold{outline:2px solid #ffd166;background:rgba(255,209,102,.2)}
-.tile{position:relative;display:inline-flex;align-items:center;justify-content:center;width:100%;height:auto;aspect-ratio:1/1;min-width:0;margin:0;padding:0;gap:0;background:rgba(0,0,0,.45);border:2px solid #555b66;border-radius:4px;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.tile{position:relative;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;margin:0;padding:0;gap:0;background:rgba(0,0,0,.45);border:2px solid #555b66;border-radius:4px;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
 .tile:hover{border-color:#cfd6e0;background:rgba(255,255,255,.12)}.tile.empty{pointer-events:none;opacity:.55}
-.tile img{width:70%;height:auto;image-rendering:pixelated}.chips .tile{width:46px;height:46px}.tile i{position:absolute;right:3px;bottom:0;font-style:normal;font-size:11px;font-weight:800;text-shadow:0 1px 2px #000,0 0 3px #000;color:#fff}
+.tile img{width:32px;height:32px}.tile i{position:absolute;right:3px;bottom:0;font-style:normal;font-size:11px;font-weight:800;text-shadow:0 1px 2px #000,0 0 3px #000;color:#fff}
 .tile.hold{border-color:#ffd166;background:rgba(255,209,102,.22)}
-.invgrid{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:3px;max-width:500px;width:100%;margin:4px auto 2px;max-height:34vh;overflow:auto}
+.invgrid{display:grid;grid-template-columns:repeat(9,46px);gap:3px;justify-content:center;width:100%;margin:4px 0 2px;max-height:34vh;overflow:auto}
 #inv .hbrow{justify-content:center;width:100%;margin-top:10px;padding-top:8px;border-top:2px solid rgba(255,255,255,.12)}#inv .hint{width:100%}
 .cbtns{display:flex;gap:6px;flex-direction:column}.cbtns button{padding:6px 10px;font-size:12px}
 #book{max-height:34vh;overflow:auto}
@@ -210,7 +210,6 @@ body.touch #itemname{bottom:100px}
   <div class="logo">Nine<b>Craft</b></div>
   <div class="sub">掘って、作って、育てて、撃って、生き延びろ。<br>道具・かまど・農業・クリーパー…マイクラ風サバイバル+銃MOD。友達と部屋コードで協力プレイ。</div>
   <div class="two"><div><label>プレイヤー名</label><input id="name" maxlength="12"></div><div><label>ワールドシード(空欄でランダム)</label><input id="seed" maxlength="20" placeholder="例: minecraft"></div></div>
-  <div style="margin:6px 0"><label>ゲームモード</label> <select id="gmode"><option value="s">サバイバル</option><option value="c">クリエイティブ(飛行・無限ブロック・即破壊)</option></select></div>
   <div class="stack">
     <button id="btnCont" style="display:none" class="alt">▶ 続きから(ソロ)</button>
     <button id="btnContHost" style="display:none" class="alt">▶ 続きから(部屋を作る)</button>
@@ -233,7 +232,7 @@ body.touch #itemname{bottom:100px}
 //  全てのテクスチャ・モデル・サウンドはコードで生成しています
 // ============================================================
 const $ = id => document.getElementById(id);
-const TOUCH = /touch=1/.test(location.search) || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && (matchMedia('(pointer:coarse)').matches || /iPad|iPhone|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))) && !/touch=0/.test(location.search);
+const TOUCH = /touch=1/.test(location.search) || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && matchMedia('(pointer:coarse)').matches);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -365,7 +364,6 @@ const SPECIAL = { door: 1, bucket: 1, wbucket: 1, lbucket: 1, rod: 1, fas: 1, bo
 const INVJP = { dirt: '土', cobble: '丸石', planks: '板材', log: '原木', sand: '砂', torch: '松明', coal: '石炭', iron: '鉄鉱石', ingot: '鉄インゴット', gold: '金鉱石', goldingot: '金インゴット', diamond: 'ダイヤ', stick: '棒', glass: 'ガラス', stone: '石', gravel: '砂利',
   craft: '作業台', furnace: 'かまど', chest: 'チェスト', bed: 'ベッド', seeds: '種', wheat: '小麦', bread: 'パン', apple: 'リンゴ', raw: '生肉', cooked: '焼き肉', wool: '羊毛', leather: '革', ammo: '9mm弾', shells: '散弾', slugs: 'ライフル弾', door: 'ドア', obsidian: '黒曜石', cactus: 'サボテン', snow: '雪ブロック', redstone: 'レッドストーン', lever: 'レバー', lamp: 'レッドストーンランプ', rstorch: 'レッドストーントーチ', ench: 'エンチャント台', shelf: '本棚', netherrack: 'ネザーラック', soulsand: 'ソウルサンド', glowstone: 'グロウストーン', endstone: 'エンドストーン', button: 'ボタン', piston: 'ピストン', bucket: 'バケツ', wbucket: '水バケツ', lbucket: '溶岩バケツ', rod: '釣り竿', fish: '生魚', cookedfish: '焼き魚', string: '糸', flint: 'フリント', fas: '火打ち石と打ち金', book: '本', pearl: 'エンダーパール', eye: 'エンダーアイ', blaze: 'ブレイズロッド', g0: 'ハンドガン', g1: 'アサルトライフル', g2: 'ショットガン', g3: 'スナイパー' };
 const GUNIDX = { g0: 0, g1: 1, g2: 2, g3: 3, g4: 4, g5: 5, g6: 6, g7: 7, g8: 8 };
-WEAPONS.forEach((w, i) => { INVJP['g' + i] = w.name; });
 INVJP.boat = 'ボート'; INVJP.tnt = 'TNT'; INVJP.miner = '自動採掘機'; INVJP.rail = 'レール'; INVJP.cart = 'トロッコ'; INVJP.horse = '馬'; INVJP.rockets = 'ロケット弾';
 const ITEMKEYS = Object.keys(INVJP);
 const USABLE = k => ITEMB[k] !== undefined || FOOD[k] !== undefined || k === 'seeds' || SPECIAL[k] || k === 'eye' || GUNIDX[k] !== undefined;
@@ -2551,14 +2549,12 @@ bindSlider('sSens', 'sens', v => v.toFixed(1) + 'x'); bindSlider('sFov', 'fov', 
 fogDist = SET.fog;
 
 // ================= 入力 =================
-let lastSpT = 0;
 addEventListener('keydown', e => {
   if (!started) return;
   if (chatOpen) { if (e.code === 'Escape') closeChat(); return; }
   if (e.target.tagName === 'INPUT') return;
   if (e.code === 'KeyW' && !e.repeat) { const t = performance.now(); if (t - lastWT < 300) sprintLatch = true; lastWT = t; }
   if (e.code === 'F3') { e.preventDefault(); showDebug = !showDebug; }
-  if (e.code === 'Space' && !e.repeat && P.creative) { const t = performance.now(); if (t - lastSpT < 300) { P.fly = !P.fly; P.vy = 0; feedMsg(P.fly ? '飛行モード(Space:上昇 Shift:下降 Ctrl:加速)' : '飛行を解除'); } lastSpT = t; }
   keys[e.code] = true;
   if (e.code === 'KeyE' && !P.dead) openBest();
   else if (e.code === 'Escape' && craftOpen) setCraft(false);
@@ -2599,7 +2595,7 @@ function openChat() { chatOpen = true; (document.exitPointerLock && document.exi
 function closeChat() { chatOpen = false; $('chatIn').style.display = 'none'; $('chatIn').blur(); if (started && !P.dead && !craftOpen && !TOUCH) canvas.requestPointerLock(); showPause(); }
 $('chatIn').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル)'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
+  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
   else if (e.code === 'Escape') closeChat();
 });
 
@@ -2704,7 +2700,6 @@ function useTool(ty) {
   if (P.dur[ty] <= 0) { feedMsg(TIERJP[P.tools[ty]] + TOOLJP[ty] + 'が壊れた', 'bad'); P.tools[ty] = 0; P.dur[ty] = 0; SND.click(.5); }
 }
 function mineTime(b) {
-  if (P.creative) return .06;
   const ty = TOOLOF[b], tier = ty ? P.tools[ty] : 0; let need = HARD[b] / ((tier ? TOOLSPD[tier] : 1) * (1 + .35 * ((ty && P.ench[ty]) || 0))); if (REQ[b] > tier) need *= 3.3; return need;
 }
 function updateMining(dt) {
@@ -2744,8 +2739,8 @@ function breakBlockAt(x, y, z, mine) {
   if (mine) {
     const ty = TOOLOF[b], tier = ty ? P.tools[ty] : 0, ok = REQ[b] <= tier;
     if (ty && tier) useTool(ty); exhaust(.025);
-    if (ok && !P.creative) { if (!(isDoor(b) && doorTop(b))) dropsFor(b, x, y, z); if (XPORE[b]) addXp(XPORE[b] + (Math.random() * XPORE[b] | 0)); }
-    else if (REQ[b] && !P.creative) feedMsg('この道具では採掘できない(' + (TIERJP[REQ[b]] + TOOLJP[ty]) + 'が必要)');
+    if (ok) { if (!(isDoor(b) && doorTop(b))) dropsFor(b, x, y, z); if (XPORE[b]) addXp(XPORE[b] + (Math.random() * XPORE[b] | 0)); }
+    else if (REQ[b]) feedMsg('この道具では採掘できない(' + (TIERJP[REQ[b]] + TOOLJP[ty]) + 'が必要)');
   }
   const up = getB(x, y + 1, z); if (isPlant(up) || up === B.TORCH || isDust(up) || up === B.RAIL || isLever(up) || isButton(up) || up === B.RSTORCH0 || up === B.RSTORCH1) breakBlockAt(x, y + 1, z, mine);
   updateHUD();
@@ -2829,7 +2824,7 @@ function rightClick() {
 function openBest() { if (!craftOpen) { if (!interact()) setCraft(true, 'inv'); } else setCraft(false); }
 
 // ================= 満腹度・経験値 =================
-function exhaust(n) { if (!P.creative) P.exh += n; }
+function exhaust(n) { P.exh += n; }
 function updateHunger(dt) {
   if (P.exh >= 4) { P.exh -= 4; if (P.sat > 0) P.sat = Math.max(0, P.sat - 1); else P.hunger = Math.max(0, P.hunger - 1); }
   if (P.eatT > 0) P.eatT -= dt;
@@ -2841,7 +2836,7 @@ function addXp(n) { if (!(n > 0)) return; P.xp += n; let up = false; while (P.xp
 
 // ================= ダメージ・死亡 =================
 function hurt(n, src, by) {
-  if (P.dead || P.creative || n <= 0 || (document.hidden && net.role === 'host')) return;
+  if (P.dead || n <= 0 || (document.hidden && net.role === 'host')) return;
   if (src && P.armor) n = Math.max(1, Math.round(n * (1 - Math.min(.85, ARMORRED[P.armor] + .05 * (P.ench.armor || 0)))));
   P.hp -= n; SND.hurt(); exhaust(.1);
   const f = $('dmg'); f.className = 'on'; clearTimeout(f._t); f._t = setTimeout(() => f.className = '', 120); P.shake = Math.max(P.shake, .04);
@@ -3330,7 +3325,6 @@ function hazards(dt) {
 }
 // ================= 毎フレーム更新 =================
 function updatePlayer(dt) {
-  if (P.creative) { for (const k of ITEMKEYS) if (P.inv[k] < 64 && !(k in GUNIDX)) P.inv[k] = 64; for (let i = 0; i < NW; i++) { P.has[i] = true; P.inv['g' + i] = 1; if (!(P.mag[i] >= WEAPONS[i].mag)) P.mag[i] = WEAPONS[i].mag; } P.hp = Math.max(P.hp, 20); P.hunger = 20; P.air = 12; }
   for (let i = 0; i < NW; i++) { if (P.has[i] === undefined) P.has[i] = false; if (P.mag[i] === undefined) P.mag[i] = WEAPONS[i].mag; }
   if (P.dead) { P.deadT += dt; P.vx *= .92; P.vz *= .92; P.vy -= 26 * dt; moveBody(P, dt); return; }
   const active = locked && !craftOpen && !chatOpen && !P.boat;
@@ -3340,16 +3334,15 @@ function updatePlayer(dt) {
   P.wasSwim = P.swim && !P.lava;
   if (hw && Math.random() < dt * 5) burst(P.x + (Math.random() - .5) * .3, P.y + EYE - .1, P.z + (Math.random() - .5) * .3, 1, [.85, .93, 1], .5, .05, 1.1, -2);   // 泡
   const f = active ? clamp((keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + joy.y, -1, 1) : 0, s = active ? clamp((keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, -1, 1) : 0;
-  P.sneak = active && (keys.ShiftLeft || keys.ShiftRight || joy.sneak) && !P.swim && !P.fly; P.sneakK = lerp(P.sneakK || 0, P.sneak ? 1 : 0, Math.min(1, dt * 14));
+  P.sneak = active && (keys.ShiftLeft || keys.ShiftRight || joy.sneak) && !P.swim; P.sneakK = lerp(P.sneakK || 0, P.sneak ? 1 : 0, Math.min(1, dt * 14));
   if (f <= 0 || P.hunger <= 6 || P.sneak) sprintLatch = false;
   P.sprint = active && (keys.ControlLeft || sprintLatch || joy.sprint) && f > 0 && P.hunger > 6 && P.adsT < .3 && !P.swim && !P.sneak;
-  const spd = (P.sprint ? 6.4 : 4.3) * (P.fly ? (P.sprint ? 3 : 2.2) : 1) * (P.swim ? .55 : 1) * (P.sneak ? .3 : 1) * lerp(1, .55, P.adsT);
+  const spd = (P.sprint ? 6.4 : 4.3) * (P.swim ? .55 : 1) * (P.sneak ? .3 : 1) * lerp(1, .55, P.adsT);
   let wx = -Math.sin(P.yaw) * f + Math.cos(P.yaw) * s, wz = -Math.cos(P.yaw) * f - Math.sin(P.yaw) * s; const l = Math.hypot(wx, wz) || 1;
   const mg = Math.min(1, Math.hypot(f, s)); wx = wx / l * spd * mg; wz = wz / l * spd * mg;
-  const k = Math.min(1, (P.onGround ? 13 : P.fly ? 9 : P.swim ? 4 : 2.5) * dt); P.vx += (wx - P.vx) * k; P.vz += (wz - P.vz) * k;
-  if (active && keys.Space && !P.fly) { if (P.swim) P.vy = Math.min(4.6, P.vy + 40 * dt); else if (P.onGround) { P.vy = 8.4; exhaust(P.sprint ? .2 : .05); } }
-  if (P.fly) { const up = active && keys.Space, dn = active && (keys.ShiftLeft || keys.ShiftRight || joy.sneak); P.vy = lerp(P.vy, up ? 9 : dn ? -9 : 0, Math.min(1, 8 * dt)); if (P.onGround && dn) P.fly = false; }
-  else if (P.swim && !P.lava) {
+  const k = Math.min(1, (P.onGround ? 13 : P.swim ? 4 : 2.5) * dt); P.vx += (wx - P.vx) * k; P.vz += (wz - P.vz) * k;
+  if (active && keys.Space) { if (P.swim) P.vy = Math.min(4.6, P.vy + 40 * dt); else if (P.onGround) { P.vy = 8.4; exhaust(P.sprint ? .2 : .05); } }
+  if (P.swim && !P.lava) {
     const sb = subm(P.x, P.y, P.z, PH), fl = flowAt(P.x, P.y + .9, P.z), dive = active && (keys.ShiftLeft || keys.ShiftRight || joy.sneak);
     P.vy += (-9 + 13 * sb) * dt - P.vy * 2 * dt;            // 浮力: 浸かるほど浮き、胸まで浸かる深さで釣り合う
     if (dive) P.vy -= 24 * dt;                               // Shiftで潜る
@@ -3499,11 +3492,10 @@ async function beginGame(m) {
   worldTime = m.time != null ? m.time : worldTime; lastDay = dayNum();
   if (m.player) { const q = m.player; Object.assign(P, { x: q.x, y: q.y, z: q.z, hp: q.hp, hunger: q.hunger, sat: q.sat || 0, xp: q.xp || 0, lvl: q.lvl || 0, armor: q.armor || 0, spawn: q.spawn || null, ench: q.ench || { pick: 0, axe: 0, shovel: 0, sword: 0, armor: 0 } }); Object.assign(P.inv, q.inv); P.has = q.has; P.mag = q.mag; for (let g = 0; g < NW; g++) P.inv['g' + g] = P.has[g] ? 1 : 0; P.slot = q.slot || 0; Object.assign(P.tools, q.tools || {}); Object.assign(P.dur, q.dur || {}); if (q.slots) P.slots = q.slots; }
   else { P.yaw = Math.random() * 6.28; }
-  started = true; buildHotbar(); updateHUD(); $('loading').classList.add('hidden'); $('hud').classList.remove('hidden'); audInit(); setVolume(SET.vol); if (TOUCH) locked = true; else canvas.requestPointerLock && canvas.requestPointerLock(); showPause(); if (P.creative) feedMsg('クリエイティブ: Space2回で飛行 / ブロック無限 / 即破壊 / チャットで /gm s でサバイバルへ', 'good');
+  started = true; buildHotbar(); updateHUD(); $('loading').classList.add('hidden'); $('hud').classList.remove('hidden'); audInit(); setVolume(SET.vol); if (TOUCH) locked = true; else canvas.requestPointerLock && canvas.requestPointerLock(); showPause();
 }
 const seedFromInput = () => { const s = $('seed').value.trim(); return s ? hashStr(s) : (Math.random() * 1e9) | 0; };
-try { $('gmode').value = localStorage.getItem('nc-gmode') || 's'; } catch (e) { }
-const grabName = () => { P.creative = $('gmode').value === 'c'; P.fly = false; try { localStorage.setItem('nc-gmode', $('gmode').value); } catch (e) { } net.name = ($('name').value.trim() || 'Player').slice(0, 12); try { localStorage.setItem('nc-name', net.name); } catch (e) { } };
+const grabName = () => { net.name = ($('name').value.trim() || 'Player').slice(0, 12); try { localStorage.setItem('nc-name', net.name); } catch (e) { } };
 $('name').value = (() => { try { return localStorage.getItem('nc-name'); } catch (e) { return ''; } })() || 'Player' + ((Math.random() * 90 + 10) | 0);
 $('btnSolo').onclick = () => { audInit(); grabName(); net.role = 'solo'; beginGame({ seed: seedFromInput(), edits: [], time: worldTime }); };
 $('btnHost').onclick = () => { audInit(); grabName(); hostRoom(); };
@@ -3519,20 +3511,6 @@ requestAnimationFrame(frame);
 // ============================================================
 //  タッチ操作(iPad): 左=浮動スティック / 右=視点ドラッグ / ボタン
 // ============================================================
-// ---------- ハイブリッド入力: タッチ端末にキーボード/マウス/トラックパッドを繋いだ場合 ----------
-{
-  const tzh = $('tz'); let mx = -1;
-  if (TOUCH && tzh) {
-    tzh.addEventListener('pointerdown', e => {
-      if (e.pointerType !== 'mouse') return; audInit(); mx = e.clientX; if (!locked || P.dead || craftOpen || chatOpen) return;
-      if (e.button === 0) { mouseL = true; if (P.sel < NW) tryFire(true); else swing(); }
-      else if (e.button === 2) { mouseR = true; P.useT = .35; P.eatHold = 0; rightClick(); }
-    });
-    addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') return; if (e.button === 0) mouseL = false; if (e.button === 2) mouseR = false; });
-    addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; mx = e.clientX; applyLook(e.movementX || 0, e.movementY || 0, 1); });
-    setInterval(() => { if (mx < 0 || !locked || P.dead || craftOpen) return; const f = mx / innerWidth; if (f < .04) applyLook(-14, 0, 1); else if (f > .96) applyLook(14, 0, 1); }, 16);   // 画面端でも視点が回り続ける(iPadはポインタロック不可のため)
-  }
-}
 document.body.classList.toggle('touch', TOUCH);
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
@@ -3586,7 +3564,7 @@ if (TOUCH) {
   const ok = () => locked && !P.dead && !craftOpen && !chatOpen;
   btn('bFire', () => { if (!ok()) return; mouseL = true; if (P.sel < NW) tryFire(true); else swing(); }, () => { mouseL = false; });
   btn('bAds', () => { if (!ok()) return; if (P.sel >= NW) rightClick(); else mouseR = true; }, () => { mouseR = false; });
-  btn('bJump', () => { keys.Space = true; if (P.creative) { const t = performance.now(); if (t - lastSpT < 300) { P.fly = !P.fly; P.vy = 0; feedMsg(P.fly ? '飛行モード(ジャンプ:上昇 しゃがみ:下降)' : '飛行を解除'); } lastSpT = t; } }, () => { keys.Space = false; });
+  btn('bJump', () => { keys.Space = true; }, () => { keys.Space = false; });
   btn('bReload', () => { if (ok()) startReload(); });
   btn('bCraft', () => { if (!P.dead) openBest(); });
   btn('bEat', () => { if (ok()) eat(); });
