@@ -166,7 +166,28 @@ body.touch #itemname{bottom:100px}
 .cbtns{display:flex;gap:6px;flex-direction:column}.cbtns button{padding:6px 10px;font-size:12px}
 #book{max-height:34vh;overflow:auto}
 </style>
-</head>
+<style id="mcui">
+button{border-radius:0!important;background:#727272!important;border:2px solid #000!important;box-shadow:inset -3px -3px 0 #4a4a4a,inset 3px 3px 0 #b0b0b0!important;text-shadow:2px 2px 0 #3a3a3a;letter-spacing:.5px}
+button:hover{background:#7d86c8!important;box-shadow:inset -3px -3px 0 #4f5586,inset 3px 3px 0 #b8c0ff!important}
+#menu{background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)),var(--dirt,#5b4026)!important;background-size:auto,96px 96px!important;image-rendering:pixelated;backdrop-filter:none!important}
+#menu h1,.card h1{font-family:'Courier New',monospace!important;font-weight:900!important;letter-spacing:4px;color:#d9d9d9!important;text-shadow:4px 4px 0 #3b3b3b,-2px -2px 0 rgba(255,255,255,.2)!important;background:none!important;-webkit-text-fill-color:#d9d9d9!important}
+.card{border-radius:0!important;background:rgba(40,40,40,.9)!important;border:3px solid #000!important;box-shadow:inset 0 0 0 3px #6a6a6a!important}
+input,select{border-radius:0!important;background:#000!important;border:2px solid #a0a0a0!important;color:#fff!important}
+#hearts span,#hunger span{display:inline-block;width:18px;height:18px;font-size:0!important;color:transparent!important;text-shadow:none!important;background-color:transparent!important;background-size:100% 100%!important;image-rendering:pixelated;-webkit-background-clip:border-box!important;background-clip:border-box!important}
+#hearts span.f{background-image:var(--hf)!important}#hearts span.h{background-image:var(--hh)!important}#hearts span.e{background-image:var(--he)!important}
+#hunger span.f{background-image:var(--ff)!important}#hunger span.h{background-image:var(--fh)!important}#hunger span.e{background-image:var(--fe)!important}
+#hotbar{background:#c6c6c6!important;border:3px solid!important;border-color:#fff #555 #555 #fff!important;border-radius:0!important;gap:0!important;padding:3px!important;box-shadow:0 0 0 2px #000!important}
+.slot{background:#8b8b8b!important;border:2px solid!important;border-color:#373737 #fff #fff #373737!important;border-radius:0!important;width:50px!important;height:50px!important;transform:none!important;box-shadow:none!important}
+.slot.sel{border-color:#fff!important;background:#a9a9a9!important;box-shadow:0 0 0 3px #000,inset 0 0 0 2px #000!important;z-index:2}
+body.touch .slot{width:44px!important;height:44px!important}
+#xpbar{height:8px!important;background:#2b2b2b!important;border:2px solid #000!important;border-radius:0!important}
+#xpfill{background:linear-gradient(#a6ff40,#4fb800)!important;border-radius:0!important}
+#xplv{color:#80ff20!important;text-shadow:2px 0 #000,-2px 0 #000,0 2px #000,0 -2px #000!important}
+#craft{background:#c6c6c6!important;color:#303030!important;border:3px solid!important;border-color:#fff #555 #555 #fff!important;border-radius:0!important;box-shadow:0 0 0 2px #000!important}
+#craft .hint{color:#4a4a4a!important}
+.tile,.hs{background:#8b8b8b!important;border:2px solid!important;border-color:#373737 #fff #fff #373737!important;border-radius:0!important}
+.tile:hover{background:#a9a9a9!important}.tile.hold,.hs.sel{outline:3px solid #fff!important}
+</style></head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
 <div id="tz"></div><div id="tstick"><i></i></div>
@@ -913,6 +934,40 @@ function terrainField(sd) {
   return out;
 }
 let villages = [], stronghold = null;
+const lootChests = new Set();
+function fillLoot(e) {
+  const T = [['ingot', 1, 5], ['coal', 2, 8], ['ammo', 20, 60], ['shells', 8, 20], ['slugs', 6, 15], ['rail', 6, 16], ['tnt', 1, 3], ['rockets', 1, 3], ['leather', 1, 3], ['raw', 2, 5]];
+  for (let i = 0; i < 5; i++) { const t = T[Math.random() * T.length | 0]; e.it[t[0]] = (e.it[t[0]] || 0) + t[1] + Math.floor(Math.random() * (t[2] - t[1] + 1)); }
+}
+function genUnderground(hm, sd) {
+  lootChests.clear();
+  const set = (x, y, z, b) => { if (x > 1 && x < W - 2 && z > 1 && z < D - 2 && y > 1 && y < H - 2) blocks[bidx(x, y, z)] = b; };
+  const carve = (sx, sz, ax, y0, len, chest) => {   // 廃坑の坑道: 3x3、支柱と梁、松明、レール
+    for (let t = 0; t < len; t++) {
+      const x = ax ? sx + t : sx, z = ax ? sz : sz + t; if (x < 3 || x >= W - 3 || z < 3 || z >= D - 3) return;
+      for (let w = -1; w <= 1; w++) {
+        const px = ax ? x : x + w, pz = ax ? z + w : z; if (y0 + 3 >= hm[pz * W + px] - 1) return;
+        for (let hh = 0; hh <= 2; hh++) set(px, y0 + hh, pz, 0);
+        if (!blocks[bidx(px, y0 - 1, pz)] || isFluid(blocks[bidx(px, y0 - 1, pz)])) set(px, y0 - 1, pz, B.COBBLE);
+      }
+      set(x, y0, z, B.RAIL);
+      if (t % 5 === 0) { for (const w of [-1, 1]) { const px = ax ? x : x + w, pz = ax ? z + w : z; set(px, y0, pz, B.LOG); set(px, y0 + 1, pz, B.LOG); } for (let w = -1; w <= 1; w++) set(ax ? x : x + w, y0 + 2, ax ? z + w : z, B.PLANKS); }
+      if (t % 10 === 5) set(ax ? x : x + 1, y0, ax ? z + 1 : z, B.TORCH);
+      if (chest && t === len - 1) { set(x, y0, z, B.CHEST); lootChests.add(bidx(x, y0, z)); }
+    }
+  };
+  for (let n = 0; n < 14; n++) {
+    const ax = h2(n, 11, sd + 700) < .5, sx = 20 + Math.floor(h2(n, 12, sd + 700) * (W - 40)), sz = 20 + Math.floor(h2(n, 13, sd + 700) * (D - 40)), y0 = 9 + Math.floor(h2(n, 14, sd + 700) * 18), len = 45 + Math.floor(h2(n, 15, sd + 700) * 45);
+    carve(sx, sz, ax, y0, len, true);
+    const mx = ax ? sx + (len >> 1) : sx, mz = ax ? sz : sz + (len >> 1); carve(mx, mz, !ax, y0, 30, true);   // 交差する支線
+  }
+  for (let n = 0; n < 26; n++) {   // ダンジョン: 苔むした小部屋+お宝チェスト
+    const cx = 14 + Math.floor(h2(n, 21, sd + 710) * (W - 28)), cz = 14 + Math.floor(h2(n, 22, sd + 710) * (D - 28)), cy = 8 + Math.floor(h2(n, 23, sd + 710) * 22);
+    if (cy + 5 >= hm[cz * W + cx] - 3) continue;
+    for (let dx = -3; dx <= 3; dx++) for (let dy = 0; dy <= 4; dy++) for (let dz = -3; dz <= 3; dz++) { const wall = Math.abs(dx) === 3 || Math.abs(dz) === 3 || dy === 0 || dy === 4; set(cx + dx, cy + dy, cz + dz, wall ? (h2(dx + n * 7, dz + dy * 5, sd + 711) < .35 ? B.GRAVEL : B.COBBLE) : 0); }
+    set(cx + 2, cy + 1, cz + 2, B.CHEST); lootChests.add(bidx(cx + 2, cy + 1, cz + 2)); set(cx - 2, cy + 1, cz - 2, B.TORCH);
+  }
+}
 function genVillages(hm, sd) {
   villages = [];
   const cand = [];
@@ -1025,6 +1080,7 @@ function genWorld(sd) {
   }
   genVillages(hm, sd);
   genStronghold(sd);
+  genUnderground(hm, sd);
 }
 function topY(x, z) { x = clamp(Math.floor(x), 0, W - 1); z = clamp(Math.floor(z), 0, D - 1); for (let y = H - 1; y >= 0; y--) { const b = blocks[bidx(x, y, z)]; if (b && (SOLIDB[b] || isFluid(b))) return y + 1; } return 1; }
 function findSpawn(rx, rz, spread) {
@@ -1751,10 +1807,21 @@ function buildVillager() {
   const e = buildHumanoid({ front: face, side: skin, top: skin, body: robe, arm: robe, leg: robe, hand: 0xc89678, cap: 0x5a3d22 }); e.type = 'villager'; e.mats = collectMats(e.root); return e;
 }
 // 汎用: モブ種別 → モデル / アニメ
-function buildMobModel(type) {
-  switch (type) { case 'pig': return buildPig(); case 'cow': return buildCow(); case 'sheep': return buildSheep(); case 'chicken': return buildChicken(); case 'creeper': return buildCreeper(); case 'skeleton': return buildSkeleton(); case 'villager': return buildVillager(); default: return buildZombie(type === 'brute'); }
+function buildDragon() {
+  const g = new THREE.Group(), root = new THREE.Group(); root.add(g);
+  const mt = c => new THREE.MeshLambertMaterial({ color: c }), dk = mt(0x17171c), md = mt(0x24242c), wm = mt(0x3a2a48), eye = new THREE.MeshLambertMaterial({ color: 0xd070ff, emissive: 0xd070ff });
+  const add = (par, w, h, d, x, y, z, m) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); par.add(q); return q; };
+  add(g, 1.6, 1.2, 3.4, 0, 1.4, 0, dk); add(g, 1.2, .5, 3.0, 0, 1.0, 0, md); add(g, .5, .5, .5, -.4, 2.1, -1.2, md); add(g, .5, .5, .5, .4, 2.1, -.4, md);
+  const neck = new THREE.Group(); neck.position.set(0, 1.7, -1.7); g.add(neck); add(neck, .9, .9, 1.4, 0, .2, -.6, dk); add(neck, .7, .7, 1.2, 0, .5, -1.8, dk);
+  const head = new THREE.Group(); head.position.set(0, .7, -2.5); neck.add(head); add(head, 1.1, .8, 1.5, 0, 0, -.5, dk); add(head, .9, .3, 1.2, 0, -.5, -.6, md); add(head, .16, .16, .1, -.35, .15, -1.25, eye); add(head, .16, .16, .1, .35, .15, -1.25, eye); add(head, .14, .5, .14, -.3, .6, 0, md).rotation.x = -.4; add(head, .14, .5, .14, .3, .6, 0, md).rotation.x = -.4;
+  let tz = 1.7, tw = 1.0; for (let i = 0; i < 5; i++) { tz += tw; add(g, tw, tw * .8, 1.1, 0, 1.3 - i * .08, tz, i % 2 ? md : dk); tw *= .8; }
+  const wings = []; for (const s of [-1, 1]) { const w = new THREE.Group(); w.position.set(s * .8, 2.0, -.4); g.add(w); add(w, 4.2, .25, .6, s * 2.1, 0, 0, dk); add(w, 4.0, .06, 2.6, s * 2.0, -.05, 1.1, wm); wings.push(w); }
+  return { root, g, type: 'dragon', parts: { head, legs: [] }, wings, mats: collectMats(root) };
 }
-const QUAD = { pig: 1, cow: 1, sheep: 1, chicken: 1, creeper: 1 };
+function buildMobModel(type) {
+  switch (type) { case 'dragon': return buildDragon(); case 'pig': return buildPig(); case 'cow': return buildCow(); case 'sheep': return buildSheep(); case 'chicken': return buildChicken(); case 'creeper': return buildCreeper(); case 'skeleton': return buildSkeleton(); case 'villager': return buildVillager(); default: return buildZombie(type === 'brute'); }
+}
+const QUAD = { pig: 1, cow: 1, sheep: 1, chicken: 1, creeper: 1, dragon: 1 };
 
 // ---- ドロップアイテム(スプライト) ----
 const dropTexCache = {};
@@ -1910,7 +1977,7 @@ Object.assign(SND, {
 // ---------- ブロックエンティティ(チェスト/かまど) ----------
 const ents = new Map();
 function entGet(idx, kind) {
-  let e = ents.get(idx); if (!e) { e = kind === 'f' ? { k: 'f', i: null, n: 0, fq: {}, burn: 0, p: 0, out: {}, xp: 0 } : { k: 'c', it: {} }; ents.set(idx, e); } return e;
+  let e = ents.get(idx); if (!e) { e = kind === 'f' ? { k: 'f', i: null, n: 0, fq: {}, burn: 0, p: 0, out: {}, xp: 0 } : { k: 'c', it: {} }; if (kind !== 'f' && lootChests.has(idx)) { fillLoot(e); lootChests.delete(idx); } ents.set(idx, e); } return e;
 }
 const entSend = idx => netSend({ t: 'ent', i: idx, d: ents.get(idx) || null });
 function spillEnt(idx, x, y, z) {
@@ -2288,7 +2355,8 @@ function stepRedstone(dt) {
       const on = srcAdj(x, y, z, false);
       if (on && b === B.PISTON0) { if (pistonPush(x, y, z, ch)) plan.push([x, y, z, B.PISTON0 + 1]); }
       else if (!on && b === B.PISTON0 + 1) { if (getB(x, y + 1, z) === 88) plan.push([x, y + 1, z, 0]); plan.push([x, y, z, B.PISTON0]); }
-    } else if (b === 88 && (getB(x, y - 1, z) < 86 || getB(x, y - 1, z) > 87)) plan.push([x, y, z, 0]);
+    } else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, 4); }
+    else if (b === 88 && (getB(x, y - 1, z) < 86 || getB(x, y - 1, z) > 87)) plan.push([x, y, z, 0]);
   }
   for (const [x, y, z, b] of plan) if (applyBlock(x, y, z, b, true)) ch.push([x, y, z, b]);
   flushCh(ch);
@@ -2403,6 +2471,7 @@ function enterDim(to) {
   dim = to; P.x = sx + .5; P.y = sy + .1; P.z = sz + .5; P.vy = 0; P.vx = P.vz = 0; portalT = -2.5;
   fullRelight(); resetChunks(); streamChunks(true); processDirty(999);
   if (to !== 'ow') spawnDimMobs(to);
+  if (to === 'end' && !dragonDown) { newMob(nextMob++, 'dragon', 64.5, 72, 64.5); feedMsg('エンダードラゴンが現れた!', 'bad'); }
   feedMsg(to === 'nether' ? 'ネザーに到着(戻るには紫のゲートへ)' : to === 'end' ? 'ジ・エンドに到着(中央のゲートで帰還)' : '地上に戻った', 'good');
 }
 function spawnDimMobs(to) {
@@ -2486,8 +2555,9 @@ const TYPEDEF = {
   creeper: { hp: 20, hw: .3, h: 1.65, speed: 2.5, dmg: 0, hostile: true, idx: 6, head: true, jp: 'クリーパー' },
   skeleton: { hp: 20, hw: .3, h: 1.8, speed: 2.4, dmg: 3, hostile: true, idx: 7, head: true, jp: 'スケルトン', burn: true },
   villager: { hp: 20, hw: .3, h: 1.8, speed: 1.3, dmg: 0, hostile: false, idx: 8, head: true, jp: '村人' },
+  dragon: { hp: 200, hw: 1.6, h: 2.6, speed: 9, dmg: 10, hostile: true, idx: 9, jp: 'エンダードラゴン', boss: true },
 };
-const TYPES = ['zombie', 'brute', 'pig', 'cow', 'sheep', 'chicken', 'creeper', 'skeleton', 'villager'];
+const TYPES = ['zombie', 'brute', 'pig', 'cow', 'sheep', 'chicken', 'creeper', 'skeleton', 'villager', 'dragon'];
 const dayNum = () => Math.floor(worldTime / DAY) + 1;
 const isNight = () => env.dayF < .45;
 
@@ -2498,6 +2568,17 @@ function feedMsg(s, cls) {
   setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 600); }, 7000); while (feedEl.children.length > 7) feedEl.firstChild.remove();
 }
 function mkRow(el, n, ch) { el.innerHTML = ''; for (let i = 0; i < n; i++) { const s = document.createElement('span'); s.textContent = ch; el.appendChild(s); } return [...el.children]; }
+(function mcIcons() {   // ピクセルのハート/ドラムスティック/土の背景を生成してCSS変数に
+  const mk = (rows, pal, half) => { const c = document.createElement('canvas'); c.width = c.height = 9; const g = c.getContext('2d'); rows.forEach((r, y) => [...r].forEach((ch, x) => { const p = typeof pal === 'function' ? pal(ch, x) : pal[ch]; if (p) { g.fillStyle = p; g.fillRect(x, y, 1, 1); } })); return 'url(' + c.toDataURL() + ')'; };
+  const HT = ['.OOO.OOO.', 'OHHXOXXXO', 'OHXXXXXXO', 'OXXXXXXXO', '.OXXXXXO.', '..OXXXO..', '...OXO...', '....O....', '.........'];
+  const full = { O: '#2a0000', X: '#e01818', H: '#ff9a9a' }, emp = { O: '#2a0000', X: '#3d1d1d', H: '#4d2929' };
+  const DR = ['.....OOO.', '....OBBBO', '...OBBBBO', '...OBBBBO', '..OOBBBO.', '.OWOOOO..', 'OWWO.....', '.OO......', '.........'];
+  const fm = { O: '#3a1c05', B: '#b5651d', W: '#f2e6d0' }, fe = { O: '#2a1a0a', B: '#3a2a1a', W: '#4a4438' };
+  const rt = document.documentElement.style;
+  rt.setProperty('--hf', mk(HT, full)); rt.setProperty('--he', mk(HT, emp)); rt.setProperty('--hh', mk(HT, (ch, x) => (x <= 4 ? full : emp)[ch]));
+  rt.setProperty('--ff', mk(DR, fm)); rt.setProperty('--fe', mk(DR, fe)); rt.setProperty('--fh', mk(DR, (ch, x) => (x <= 4 ? fm : fe)[ch]));
+  try { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'), im = g.createImageData(16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const p = TILEFN[T.DIRT](x, y) || [90, 64, 40]; const o = (y * 16 + x) * 4; im.data[o] = p[0]; im.data[o + 1] = p[1]; im.data[o + 2] = p[2]; im.data[o + 3] = 255; } g.putImageData(im, 0, 0); rt.setProperty('--dirt', 'url(' + c.toDataURL() + ')'); } catch (e) { }
+})();
 const heartEls = mkRow($('hearts'), 10, '♥'), hungEls = mkRow($('hunger'), 10, '🍗'), airEls = mkRow($('air'), 10, '●');
 function setRow(els, v, cls) { for (let i = 0; i < els.length; i++) { const f = v - i * 2; const c = f >= 2 ? 'f' : f >= 1 ? 'h' : 'e'; if (els[i].dataset.s !== c) { els[i].dataset.s = c; els[i].className = c; } } }
 const hotEls = [], hotKey = [];
@@ -2880,7 +2961,7 @@ function removeMob(id) { const m = mobs.get(id); if (!m) return; scene.remove(m.
 function allTargets() { const a = []; if (!P.dead) a.push({ id: net.id, x: P.x, y: P.y, z: P.z }); for (const [id, p] of players) if (p.hp > 0) a.push({ id, x: p.tx, y: p.ty, z: p.tz }); return a; }
 const LOOT = {
   pig: () => [['raw', 1 + (Math.random() * 2 | 0)]], cow: () => [['raw', 1 + (Math.random() * 3 | 0)], ['leather', Math.random() * 3 | 0]], sheep: () => [['wool', 1], ['raw', 1]], chicken: () => [['raw', 1], ['seeds', Math.random() * 2 | 0]],
-  villager: () => [], creeper: () => [['shells', 2 + (Math.random() * 4 | 0)]], skeleton: () => [['blaze', dim === 'nether' && Math.random() < .35 ? 1 : 0], ['ammo', 6 + (Math.random() * 10 | 0)], ['coal', Math.random() < .3 ? 1 : 0]],
+  dragon: () => [['ingot', 24], ['rockets', 6], ['tnt', 8], ['shells', 30]], villager: () => [], creeper: () => [['shells', 2 + (Math.random() * 4 | 0)]], skeleton: () => [['blaze', dim === 'nether' && Math.random() < .35 ? 1 : 0], ['ammo', 6 + (Math.random() * 10 | 0)], ['coal', Math.random() < .3 ? 1 : 0]],
   zombie: () => { const l = []; if (Math.random() < .35) l.push(['raw', 1]); if (Math.random() < .5) l.push(['ammo', 6 + (Math.random() * 10 | 0)]); if (Math.random() < .12) l.push(['shells', 3]); if (Math.random() < .08) l.push(['slugs', 2]); if (Math.random() < .15) l.push(['coal', 1]); if (Math.random() < .08) l.push(['ingot', 1]); return l; },
   brute: () => [['ingot', 1 + (Math.random() * 3 | 0)], ['ammo', 20], ['iron', 1 + (Math.random() * 2 | 0)]],
 };
@@ -2892,6 +2973,7 @@ function damageMob(id, dmg, by, head, from) {
   const pos = { x: m.x, y: m.y, z: m.z }; SND[m.hp > 0 ? 'zhit' : 'zdie'](pos); SND.mob(m.type, pos);
   if (m.hp <= 0) {
     const mx = m.x, my = m.y, mz = m.z, ty = m.type; removeMob(id); burst(mx, my + .9, mz, 18, D_.hostile ? [.36, .55, .31] : [.9, .55, .6], 5, .12, .9, 14);
+    if (ty === 'dragon') { dragonDown = true; feedMsg('エンダードラゴンを倒した!', 'good'); if (by === net.id) addXp(80); }
     giveLoot(by, LOOT[ty]().filter(a => a[1] > 0), [mx, my + .5, mz]);
     if (by === net.id) { P.kills++; addXp(D_.hostile ? 5 : 1 + (Math.random() * 3 | 0)); } else { const c = net.conns.get(by); c && c.open && c.send({ t: 'xp', n: D_.hostile ? 5 : 2 }); }
   }
@@ -2919,10 +3001,34 @@ function explodeAt(x, y, z, r, by) {   // 爆風圏内のTNTは連鎖して着�
     if (dx * dx + dy * dy + dz * dz > R2 * R2) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz;
     if (getB(bx, by_, bz) === B.TNT) primeTnt(bx, by_, bz, .25 + Math.random() * .6);
   }
+  for (const e of tnts) { const dx = e.x - x, dy = e.y - y, dz = e.z - z, d = Math.hypot(dx, dy, dz); if (d < r * 2 && d > .01) { const k = 1 - d / (r * 2); e.vx += dx / d * k * 26; e.vy += dy / d * k * 26 + k * 4; e.vz += dz / d * k * 26; } }   // 爆風で点火済みTNTを飛ばす
   explodeAt0(x, y, z, r, by);
 }
 function boomFx(x, y, z) { burst(x, y, z, 50, [.9, .6, .2], 9, .22, .9, 6); burst(x, y, z, 40, [.3, .3, .3], 6, .3, 1.4, -1); SND.boom({ x, y, z }); P.shake = Math.max(P.shake, Math.max(0, 1 - Math.hypot(P.x - x, P.z - z) / 20) * .8); }
 function losClear(a, b) { const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, l = Math.hypot(dx, dy, dz) || 1, r = rayBlocks(a, { x: dx / l, y: dy / l, z: dz / l }, l, 1); return !r || r.t >= l - .5; }
+let dragonDown = false;
+function launchFireball(x, y, z, tx, ty, tz) {
+  const d = Math.hypot(tx - x, ty - y, tz - z) || 1, mesh = new THREE.Mesh(new THREE.SphereGeometry(.45, 8, 8), new THREE.MeshBasicMaterial({ color: 0xcc55ff })); scene.add(mesh);
+  rockets.push({ x, y, z, vx: (tx - x) / d * 24, vy: (ty - y) / d * 24, vz: (tz - z) / d * 24, t: 0, mesh, fb: true });
+}
+function simDragon(m, dt) {   // 周回 → ファイヤーボール → 急降下
+  const T = allTargets(), t = T.length ? T.reduce((a, b) => Math.hypot(a.x - m.x, a.z - m.z) < Math.hypot(b.x - m.x, b.z - m.z) ? a : b) : null;
+  m.ph = (m.ph || 0) + dt; m.mode = m.mode || 'circle'; m.mt = (m.mt || 0) + dt; m.fireT = (m.fireT === undefined ? 4 : m.fireT) - dt;
+  let tx, ty, tz, sp = 9;
+  if (m.mode === 'circle') {
+    m.ang = (m.ang === undefined ? 0 : m.ang) + dt * .45; tx = 64 + Math.cos(m.ang) * 36; tz = 64 + Math.sin(m.ang) * 36; ty = 74 + Math.sin(m.ph * .7) * 6;
+    if (t && m.fireT <= 0 && Math.hypot(t.x - m.x, t.z - m.z) < 60) { m.fireT = 5 + Math.random() * 3; launchFireball(m.x, m.y + 1.5, m.z, t.x, t.y + 1, t.z); }
+    if (t && m.mt > 14) { m.mode = 'dive'; m.mt = 0; }
+  } else {
+    if (!t) { m.mode = 'circle'; return; } tx = t.x; ty = t.y + 1; tz = t.z; sp = 17;
+    const dd = Math.hypot(tx - m.x, ty - m.y - 1.3, tz - m.z);
+    if (dd < 3.6 || m.mt > 7) { if (dd < 3.8) hurtTarget(t, 10, { x: m.x, y: m.y, z: m.z }, null); m.mode = 'circle'; m.mt = 0; m.ang = Math.atan2(m.z - 64, m.x - 64); }
+  }
+  const dx = tx - m.x, dy = ty - m.y, dz = tz - m.z, d = Math.hypot(dx, dy, dz) || 1, k = Math.min(1, 2.2 * dt);
+  m.vx = lerp(m.vx, dx / d * sp, k); m.vy = lerp(m.vy, dy / d * sp, k); m.vz = lerp(m.vz, dz / d * sp, k);
+  m.x += m.vx * dt; m.y += m.vy * dt; m.z += m.vz * dt; m.yaw = Math.atan2(-m.vx, -m.vz);
+  const w = m.ent.wings; if (w) { const f = Math.sin(m.ph * (m.mode === 'dive' ? 9 : 4)) * .55; w[0].rotation.z = f; w[1].rotation.z = -f; }
+}
 function simMobs(dt) {
   const T = allTargets(), day = dayNum();
   spawnT -= dt;
@@ -2950,6 +3056,7 @@ function simMobs(dt) {
     }
   }
   for (const m of [...mobs.values()]) {
+    if (m.type === 'dragon') { simDragon(m, dt); continue; }
     const D_ = TYPEDEF[m.type]; let best = null, bd = 1e9;
     for (const t of T) { const d = Math.hypot(t.x - m.x, t.z - m.z); if (d < bd) { bd = d; best = t; } }
     if (!best || bd > 80) { if (!D_.hostile && bd > 80 || D_.hostile && bd > 64) { removeMob(m.id); continue; } }
@@ -3055,8 +3162,8 @@ function updateBoats(dt) {
     if (b.rider && P.dead) { b.rider = false; P.boat = null; }
     const inW = waterAt(b.x, b.y + .12, b.z), fl = inW ? flowAt(b.x, b.y + .12, b.z) : null;
     if (inW || waterAt(b.x, b.y - .1, b.z)) {
-      let yy = Math.floor(b.y + .12); while (isWater(getB(Math.floor(b.x), yy + 1, Math.floor(b.z)))) yy++;
-      b.vy += (((yy + .5) - b.y) * 26 - b.vy * 4.5) * dt;      // 浮力: 水面へのばね+減衰でぷかぷか浮く
+      const bx_ = Math.floor(b.x), bz_ = Math.floor(b.z); let yy = isWater(getB(bx_, Math.floor(b.y - .1), bz_)) ? Math.floor(b.y - .1) : Math.floor(b.y + .12); while (isWater(getB(bx_, yy + 1, bz_))) yy++;
+      b.vy += (((yy + .8) - b.y) * 26 - b.vy * 4.5) * dt;      // 浮力: 水面(最上段の水)へのばね+減衰でぷかぷか浮く
       b.vx *= 1 - 1.6 * dt; b.vz *= 1 - 1.6 * dt;
       if (fl) { b.vx += fl[0] * 5 * dt; b.vz += fl[1] * 5 * dt; }
     } else { b.vy -= 22 * dt; b.vx *= 1 - 5 * dt; b.vz *= 1 - 5 * dt; }
@@ -3086,28 +3193,37 @@ function launchRocket(o, dir, mz) {
 }
 function updateRockets(dt) {
   for (let i = rockets.length - 1; i >= 0; i--) {
-    const r = rockets[i]; r.t += dt; r.vy -= 4 * dt;
+    const r = rockets[i]; r.t += dt; if (!r.fb) r.vy -= 4 * dt;
     const nx = r.x + r.vx * dt, ny = r.y + r.vy * dt, nz = r.z + r.vz * dt;
     let hit = r.t > 8 || ny < 0 || solidAt(Math.floor(nx), Math.floor(ny), Math.floor(nz));
-    if (!hit) for (const m of mobs.values()) if (Math.abs(m.x - nx) < (m.hw || .4) + .4 && Math.abs(m.z - nz) < (m.hw || .4) + .4 && ny > m.y - .3 && ny < m.y + (m.h || 1.8) + .3) { hit = true; break; }
-    if (hit) { scene.remove(r.mesh); rockets.splice(i, 1); explodeAt(r.x, r.y, r.z, 4, null); continue; }
-    r.x = nx; r.y = ny; r.z = nz; r.mesh.position.set(nx, ny, nz); r.mesh.lookAt(nx + r.vx, ny + r.vy, nz + r.vz); r.mesh.rotateX(Math.PI / 2);
+    if (!hit && r.fb && Math.hypot(nx - P.x, ny - (P.y + .9), nz - P.z) < 1.3) hit = true;
+    if (!hit && !r.fb) for (const m of mobs.values()) if (Math.abs(m.x - nx) < (m.hw || .4) + .4 && Math.abs(m.z - nz) < (m.hw || .4) + .4 && ny > m.y - .3 && ny < m.y + (m.h || 1.8) + .3) { hit = true; break; }
+    if (hit) { scene.remove(r.mesh); rockets.splice(i, 1); explodeAt(r.x, r.y, r.z, r.fb ? 2.6 : 4, null); continue; }
+    r.x = nx; r.y = ny; r.z = nz; r.mesh.position.set(nx, ny, nz); if (!r.fb) { r.mesh.lookAt(nx + r.vx, ny + r.vy, nz + r.vz); r.mesh.rotateX(Math.PI / 2); }
     if (Math.random() < .8) burst(nx, ny, nz, 1, [.85, .85, .85], .6, .1, .7, -1);
   }
 }
 // ---------- TNT ----------
 const tnts = [];
-function primeTnt(x, y, z, fuse) {
+function primeTnt(x, y, z, fuse, vx, vy, vz) {
   if (getB(x, y, z) === B.TNT) { applyBlock(x, y, z, 0); netSend({ t: 'block', x, y, z, b: 0 }); }
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(.98, .98, .98), new THREE.MeshLambertMaterial({ color: 0xc02a22 })); mesh.position.set(x + .5, y + .5, z + .5); scene.add(mesh);
-  tnts.push({ x: x + .5, y: y + .5, z: z + .5, vy: 0, t: fuse, mesh });
+  tnts.push({ x: x + .5, y: y + .5, z: z + .5, vx: vx || 0, vy: vy || 0, vz: vz || 0, t: fuse, mesh });
 }
+const tntSolid = (x, y, z) => solidAt(Math.floor(x), Math.floor(y), Math.floor(z));
+// 点火したTNTは物理で動く: 重力・水流・ブロック衝突・爆風で吹き飛ぶ(→TNT砲)
 function updateTnt(dt) {
   for (let i = tnts.length - 1; i >= 0; i--) {
     const e = tnts[i]; e.t -= dt;
-    if (!solidAt(Math.floor(e.x), Math.floor(e.y - .5 + e.vy * dt), Math.floor(e.z))) { e.vy -= 22 * dt; e.y += e.vy * dt; } else if (e.vy < 0) { e.vy = 0; e.y = Math.floor(e.y - .5) + 1.5; }
+    if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z); e.vy += -2 * dt - e.vy * 3 * dt; e.vx *= 1 - 1.5 * dt; e.vz *= 1 - 1.5 * dt; if (fl) { e.vx += fl[0] * 10 * dt; e.vz += fl[1] * 10 * dt; e.vy += fl[2] * 5 * dt; } }
+    else { e.vy -= 22 * dt; e.vx *= 1 - .15 * dt; e.vz *= 1 - .15 * dt; }
+    let gnd = false;
+    const nx = e.x + e.vx * dt; if (tntSolid(nx + Math.sign(e.vx) * .49, e.y, e.z)) e.vx *= -.25; else e.x = nx;
+    const nz = e.z + e.vz * dt; if (tntSolid(e.x, e.y, nz + Math.sign(e.vz) * .49)) e.vz *= -.25; else e.z = nz;
+    const ny = e.y + e.vy * dt; if (tntSolid(e.x, ny + (e.vy < 0 ? -.49 : .49), e.z)) { if (e.vy < 0) gnd = true; e.vy = e.vy < -6 ? -e.vy * .2 : 0; } else e.y = ny;
+    if (gnd) { e.vx *= 1 - 8 * dt; e.vz *= 1 - 8 * dt; }
     e.mesh.position.set(e.x, e.y, e.z); e.mesh.material.emissive.setHex(Math.floor(e.t * 6) % 2 ? 0xffffff : 0x000000); e.mesh.scale.setScalar(1 + Math.max(0, .5 - e.t) * .25);
-    if (e.t <= 0) { scene.remove(e.mesh); tnts.splice(i, 1); explodeAt(e.x, e.y, e.z, 5, null); }
+    if (e.t <= 0 || e.y < 0) { scene.remove(e.mesh); tnts.splice(i, 1); explodeAt(e.x, e.y, e.z, 5, null); }
   }
 }
 // ---------- 自動採掘機: 真下を5x5で上から順に掘り進む(近くにいる間だけ動く)。掘った物は機械の上に出る ----------
