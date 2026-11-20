@@ -2355,7 +2355,7 @@ function stepRedstone(dt) {
       const on = srcAdj(x, y, z, false);
       if (on && b === B.PISTON0) { if (pistonPush(x, y, z, ch)) plan.push([x, y, z, B.PISTON0 + 1]); }
       else if (!on && b === B.PISTON0 + 1) { if (getB(x, y + 1, z) === 88) plan.push([x, y + 1, z, 0]); plan.push([x, y, z, B.PISTON0]); }
-    } else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, 4); }
+    } else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, tntFuseAt(x, y, z)); }
     else if (b === 88 && (getB(x, y - 1, z) < 86 || getB(x, y - 1, z) > 87)) plan.push([x, y, z, 0]);
   }
   for (const [x, y, z, b] of plan) if (applyBlock(x, y, z, b, true)) ch.push([x, y, z, b]);
@@ -3001,7 +3001,7 @@ function explodeAt(x, y, z, r, by) {   // 爆風圏内のTNTは連鎖して着�
     if (dx * dx + dy * dy + dz * dz > R2 * R2) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz;
     if (getB(bx, by_, bz) === B.TNT) primeTnt(bx, by_, bz, .25 + Math.random() * .6);
   }
-  for (const e of tnts) { const dx = e.x - x, dy = e.y - y, dz = e.z - z, d = Math.hypot(dx, dy, dz); if (d < r * 2 && d > .01) { const k = 1 - d / (r * 2); e.vx += dx / d * k * 26; e.vy += dy / d * k * 26 + k * 4; e.vz += dz / d * k * 26; } }   // 爆風で点火済みTNTを飛ばす
+  for (const e of tnts) { const dx = e.x - x, dy = e.y - y, dz = e.z - z, d = Math.hypot(dx, dy, dz); if (d < r * 2 && d > .01) { const k = 1 - d / (r * 2); if (k * 26 > 8) e.hot = true; e.vx += dx / d * k * 26; e.vy += dy / d * k * 26 + k * 4; e.vz += dz / d * k * 26; } }   // 爆風で点火済みTNTを飛ばす
   explodeAt0(x, y, z, r, by);
 }
 function boomFx(x, y, z) { burst(x, y, z, 50, [.9, .6, .2], 9, .22, .9, 6); burst(x, y, z, 40, [.3, .3, .3], 6, .3, 1.4, -1); SND.boom({ x, y, z }); P.shake = Math.max(P.shake, Math.max(0, 1 - Math.hypot(P.x - x, P.z - z) / 20) * .8); }
@@ -3211,17 +3211,26 @@ function primeTnt(x, y, z, fuse, vx, vy, vz) {
   tnts.push({ x: x + .5, y: y + .5, z: z + .5, vx: vx || 0, vy: vy || 0, vz: vz || 0, t: fuse, mesh });
 }
 const tntSolid = (x, y, z) => solidAt(Math.floor(x), Math.floor(y), Math.floor(z));
-// 点火したTNTは物理で動く: 重力・水流・ブロック衝突・爆風で吹き飛ぶ(→TNT砲)
+// レッドストーンで点火するときの導火線: レバー/トーチに直付け、または『導線(粉)がTNTの真上/真下』=1秒(推進薬向け)、『導線が横』またはボタン=4秒(砲弾向け)
+function tntFuseAt(x, y, z) {
+  let f = 99;
+  for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]]) { const n = getB(x + dx, y + dy, z + dz); if (n === B.LEVER1 || n === B.RSTORCH1) f = Math.min(f, 1); else if (n === B.BUTTON1) f = Math.min(f, 4); else if (isDust(n) && n > 70) f = Math.min(f, dy ? 1 : 4); }
+  return f === 99 ? 4 : f;
+}
+// 点火したTNTは物理で動く: 重力・水流・ブロック衝突・爆風で吹き飛ぶ(→TNT砲)。爆風で高速になったTNT(砲弾)は、ぶつかった瞬間に爆発する(着発信管)
 function updateTnt(dt) {
   for (let i = tnts.length - 1; i >= 0; i--) {
     const e = tnts[i]; e.t -= dt;
-    if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z); e.vy += -2 * dt - e.vy * 3 * dt; e.vx *= 1 - 1.5 * dt; e.vz *= 1 - 1.5 * dt; if (fl) { e.vx += fl[0] * 10 * dt; e.vz += fl[1] * 10 * dt; e.vy += fl[2] * 5 * dt; } }
-    else { e.vy -= 22 * dt; e.vx *= 1 - .15 * dt; e.vz *= 1 - .15 * dt; }
-    let gnd = false;
-    const nx = e.x + e.vx * dt; if (tntSolid(nx + Math.sign(e.vx) * .49, e.y, e.z)) e.vx *= -.25; else e.x = nx;
-    const nz = e.z + e.vz * dt; if (tntSolid(e.x, e.y, nz + Math.sign(e.vz) * .49)) e.vz *= -.25; else e.z = nz;
-    const ny = e.y + e.vy * dt; if (tntSolid(e.x, ny + (e.vy < 0 ? -.49 : .49), e.z)) { if (e.vy < 0) gnd = true; e.vy = e.vy < -6 ? -e.vy * .2 : 0; } else e.y = ny;
-    if (gnd) { e.vx *= 1 - 8 * dt; e.vz *= 1 - 8 * dt; }
+    const n = Math.min(14, Math.max(1, Math.ceil(Math.hypot(e.vx, e.vy, e.vz) * dt / .4))), h = dt / n;
+    for (let s = 0; s < n && e.t > 0; s++) {
+      if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z); e.vy += -2 * h - e.vy * 3 * h; e.vx *= 1 - 1.5 * h; e.vz *= 1 - 1.5 * h; if (fl) { e.vx += fl[0] * 10 * h; e.vz += fl[1] * 10 * h; e.vy += fl[2] * 5 * h; } }
+      else { e.vy -= 22 * h; e.vx *= 1 - .15 * h; e.vz *= 1 - .15 * h; }
+      let gnd = false;
+      const nx = e.x + e.vx * h; if (tntSolid(nx + Math.sign(e.vx) * .49, e.y, e.z)) { if (e.hot && Math.hypot(e.vx, e.vy, e.vz) > 10) e.t = 0; e.vx *= -.25; } else e.x = nx;
+      const nz = e.z + e.vz * h; if (tntSolid(e.x, e.y, nz + Math.sign(e.vz) * .49)) { if (e.hot && Math.hypot(e.vx, e.vy, e.vz) > 10) e.t = 0; e.vz *= -.25; } else e.z = nz;
+      const ny = e.y + e.vy * h; if (tntSolid(e.x, ny + (e.vy < 0 ? -.49 : .49), e.z)) { if (e.hot && Math.hypot(e.vx, e.vy, e.vz) > 10) e.t = 0; if (e.vy < 0) gnd = true; e.vy = e.vy < -6 ? -e.vy * .2 : 0; } else e.y = ny;
+      if (gnd) { e.vx *= 1 - 8 * h; e.vz *= 1 - 8 * h; }
+    }
     e.mesh.position.set(e.x, e.y, e.z); e.mesh.material.emissive.setHex(Math.floor(e.t * 6) % 2 ? 0xffffff : 0x000000); e.mesh.scale.setScalar(1 + Math.max(0, .5 - e.t) * .25);
     if (e.t <= 0 || e.y < 0) { scene.remove(e.mesh); tnts.splice(i, 1); explodeAt(e.x, e.y, e.z, 5, null); }
   }
