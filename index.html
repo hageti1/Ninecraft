@@ -463,6 +463,10 @@ function mkRecipes() {
   sh('軽機関銃', ['III', 'KII', 'P R'], { weapon: 7 }, 'gun:7');
   sh('ボート', ['P P', 'PPP'], { give: { boat: 1 } }, 'item:boat');
   sh('RPG-7', ['III', 'KPI', '  P'], { weapon: 8 }, 'gun:8');
+  ls('★キャノン設置・直射(TNT4)', ['tnt', 'tnt', 'tnt', 'tnt'], { build: 'direct', give: {} }, 'item:tnt');
+  ls('★キャノン設置・迫撃A近(TNT2)', ['tnt', 'tnt'], { build: 'mortar1', give: {} }, 'item:tnt');
+  ls('★キャノン設置・迫撃B中(TNT3)', ['tnt', 'tnt', 'tnt'], { build: 'mortar2', give: {} }, 'item:tnt');
+  ls('★キャノン設置・重砲3連(TNT6)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'heavy', give: {} }, 'item:tnt');
   ls('ロケット弾 ×3', ['cobble', 'coal', 'coal', 'coal'], { give: { rockets: 3 } }, 'item:rockets');
   sh('TNT ×2', ['KNK', 'NKN', 'KNK'], { give: { tnt: 2 } }, 'item:tnt');
   sh('自動採掘機', ['III', 'IRI', 'CPC'], { give: { miner: 1 } }, 'item:miner');
@@ -2130,10 +2134,11 @@ $('craft').addEventListener('click', ev => {
 });
 const hasRes = cost => Object.entries(cost).every(([k, v]) => P.inv[k] >= v);
 function applyCraft(rc) {
-  if (rc.weapon) { P.has[rc.weapon] = true; P.mag[rc.weapon] = WEAPONS[rc.weapon].mag; P.inv['g' + rc.weapon] = 1; const e = P.slots.indexOf(null); if (e >= 0 && !P.slots.includes('g' + rc.weapon)) P.slots[e] = 'g' + rc.weapon; feedMsg(WEAPONS[rc.weapon].name + 'をクラフトした!', 'good'); }
+  if (rc.build) buildCannon(rc.build);
+  else if (rc.weapon) { P.has[rc.weapon] = true; P.mag[rc.weapon] = WEAPONS[rc.weapon].mag; P.inv['g' + rc.weapon] = 1; const e = P.slots.indexOf(null); if (e >= 0 && !P.slots.includes('g' + rc.weapon)) P.slots[e] = 'g' + rc.weapon; feedMsg(WEAPONS[rc.weapon].name + 'をクラフトした!', 'good'); }
   else if (rc.tool) { P.tools[rc.tool.type] = rc.tool.tier; P.dur[rc.tool.type] = TOOLMAX[rc.tool.tier]; feedMsg(rc.name + 'を作った', 'good'); }
   else if (rc.armor) { P.armor = rc.armor; feedMsg(rc.name + 'を装備した', 'good'); }
-  else for (const [k, v] of Object.entries(rc.give)) P.inv[k] += v;
+  else if (rc.give) for (const [k, v] of Object.entries(rc.give)) P.inv[k] += v;
   SND.craft(); updateHUD();
 }
 // ---------- ドロップアイテム ----------
@@ -2680,7 +2685,7 @@ function openChat() { chatOpen = true; (document.exitPointerLock && document.exi
 function closeChat() { chatOpen = false; $('chatIn').style.display = 'none'; $('chatIn').blur(); if (started && !P.dead && !craftOpen && !TOUCH) canvas.requestPointerLock(); showPause(); }
 $('chatIn').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル)'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
+  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else if (c[0] === '/cannon') { const kinds = ['direct', 'mortar1', 'mortar2', 'heavy'], need = { direct: 4, mortar1: 2, mortar2: 3, heavy: 6 }, kd = kinds.includes(c[1]) ? c[1] : null; if (!kd) feedMsg('/cannon direct | mortar1 | mortar2 | heavy', 'good'); else if (!P.creative && !(P.inv.tnt >= need[kd])) feedMsg('TNTが' + need[kd] + '個必要です', 'bad'); else { if (!P.creative) P.inv.tnt -= need[kd]; buildCannon(kd); updateHUD(); } } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル) /cannon direct'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
   else if (e.code === 'Escape') closeChat();
 });
 
@@ -2712,11 +2717,12 @@ function trace(o, d, range) {
   }
   return best;
 }
-function tryFire(first) {
-  if (P.sel >= NW || P.cd > 0 || P.dead) return; const k = P.sel, w = WEAPONS[k]; if (!P.has[k]) return;
+function tryFire(first) { try { tryFire0(first); } catch (e) { console.error(e); if (first) feedMsg('発射エラー: ' + (e && e.message), 'bad'); } }
+function tryFire0(first) {
+  if (P.sel >= NW || P.cd > 0 || P.dead) return; const k = P.sel, w = WEAPONS[k]; if (!P.has[k]) { if (first) feedMsg('この銃はまだ持っていません(作業台でクラフト)', 'bad'); return; }
   if (P.reloadT > 0) { if (w.perShell && P.mag[k] > 0) { P.reloadT = 0; P.reloadK = -1; } else return; }
   if (!first && !w.auto) return;
-  if (P.mag[k] <= 0) { if (first) { SND.dryfire(); if (ammoFor(k) > 0) startReload(); } return; }
+  if (P.mag[k] <= 0) { if (first) { SND.dryfire(); if (ammoFor(k) > 0) startReload(); else feedMsg(AMMOJP[w.ammo] + 'がありません(丸石+石炭などでクラフト)', 'bad'); } return; }
   P.mag[k]--; P.cd = w.rate; P.kick = 1; P.flashT = .05; P.cycleT = w.rate > .5 ? .55 : .12;
   const o = eyePos().clone(), base = lookDir().clone();
   const right = vC.set(Math.cos(P.yaw), 0, -Math.sin(P.yaw)).clone(), up = new THREE.Vector3().crossVectors(right, base).normalize();
@@ -2725,26 +2731,26 @@ function tryFire(first) {
   if (w.scope) sp = lerp(.05, w.spread, P.adsT > .85 ? 1 : 0) + spd * (P.adsT > .85 ? .004 : 0);
   else sp *= lerp(1, .4, P.adsT);
   const ends = []; let hits = 0, head = false, killed = false;
-  const mz = muzzleWorld(k);
+  let mz; try { mz = muzzleWorld(k); } catch (e) { mz = o.clone(); }
   if (w.id === 'rpg') { launchRocket(o, base, mz); SND.shot(k); P.pitch += .05; P.shake = .35; updateHUD(); if (P.mag[k] <= 0 && ammoFor(k) > 0) setTimeout(() => { if (P.sel === k) startReload(); }, 600); return; }
   for (let i = 0; i < w.pellets; i++) {
     const ang = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * sp;
     const dir = base.clone().addScaledVector(right, Math.cos(ang) * rr).addScaledVector(up, Math.sin(ang) * rr).normalize();
     const r = trace(o, dir, w.range), ex = o.x + dir.x * r.t, ey = o.y + dir.y * r.t, ez = o.z + dir.z * r.t;
     let kind = 0, nx = 0, ny = 0, nz = 0;
-    if (r.type === 'block') { kind = 1; nx = r.hit.nx; ny = r.hit.ny; nz = r.hit.nz; impactBlock(ex, ey, ez, nx, ny, nz, r.hit.b); }
+    if (r.type === 'block') { kind = 1; nx = r.hit.nx; ny = r.hit.ny; nz = r.hit.nz; try { impactBlock(ex, ey, ez, nx, ny, nz, r.hit.b); } catch (e) { } }
     else if (r.type === 'mob' || r.type === 'player') {
       kind = 2; hits++; head = head || r.head; const dmg = w.dmg * (r.head ? (w.scope ? 2.5 : 2) : 1);
-      bloodFx(ex, ey, ez, dir, r.head);
+      try { bloodFx(ex, ey, ez, dir, r.head); } catch (e) { }
       if (r.type === 'mob') hitMob(r.id, dmg, r.head, o); else sendHitPlayer(r.id, dmg);
     }
     ends.push([+ex.toFixed(2), +ey.toFixed(2), +ez.toFixed(2), kind, nx, ny, nz]);
-    tracer(mz, vD.set(ex, ey, ez), k);
+    try { tracer(mz, vD.set(ex, ey, ez), k); } catch (e) { }
   }
-  muzzleEffects(k, mz);
+  try { muzzleEffects(k, mz); } catch (e) { }
   P.pitch += w.rec * (.75 + Math.random() * .5) * lerp(1, .55, P.adsT); P.yaw += (Math.random() - .5) * w.recH * 2 * lerp(1, .5, P.adsT); P.rec += w.rec * .5; P.bloom = Math.min(.05, P.bloom + w.bloom); P.shake = w.rec * 3;
   if (hits) { const h = $('hitmark'); h.className = 'on' + (head ? ' head' : ''); clearTimeout(h._t); h._t = setTimeout(() => h.className = '', 90); SND.hit(head); }
-  SND.shot(k); netSend({ t: 'shot', o: [+mz.x.toFixed(2), +mz.y.toFixed(2), +mz.z.toFixed(2)], e: ends, w: k });
+  try { SND.shot(k); } catch (e) { } netSend({ t: 'shot', o: [+mz.x.toFixed(2), +mz.y.toFixed(2), +mz.z.toFixed(2)], e: ends, w: k });
   if (w.id === 'shotgun') setTimeout(SND.pump, 250); if (w.id === 'sniper') SND.bolt();
   if (P.mag[k] <= 0 && ammoFor(k) > 0) setTimeout(() => { if (P.sel === k) startReload(); }, 300);
   updateHUD();
@@ -3235,6 +3241,26 @@ function updateTnt(dt) {
     if (e.t <= 0 || e.y < 0) { scene.remove(e.mesh); tnts.splice(i, 1); explodeAt(e.x, e.y, e.z, 5, null); }
   }
 }
+// ---------- TNTキャノン設置キット(クラフトで目の前に組み上がる。レバーが自分の2マス前、砲はその12マス先。レバーを右クリックで発射) ----------
+function cannonCells(kind) {
+  const c = [], A = (x, y, z, t) => c.push([x, y, z, t]);
+  const hub = arms => { A(-2, 0, 0, 'F'); A(-2, 1, 0, 'D'); A(-3, 1, 0, 'D'); if (arms.includes('F')) { A(-1, 0, 0, 'A'); A(-1, 1, 0, 'D'); } if (arms.includes('L')) { A(-2, 0, 1, 'A'); A(-2, 1, 1, 'D'); } if (arms.includes('R')) { A(-2, 0, -1, 'A'); A(-2, 1, -1, 'D'); } };
+  const lead = () => { for (let x = -11; x <= -4; x++) A(x, 1, 0, 'D'); A(-12, 1, 0, 'L'); };
+  const feed = (sy, shells) => { A(-2, 1, -1, 'D'); for (let x = -1; x <= (sy === 1 ? 0 : -1); x++) A(x, 1, -1, 'D'); for (const sx of shells) { A(sx, sy, 0, 'S'); if (sy !== 1) A(sx, sy, -1, 'D'); } };
+  if (kind === 'direct') { hub('FLR'); feed(0, [0]); } else if (kind === 'mortar1') { hub('F'); feed(1, [0]); } else if (kind === 'mortar2') { hub('LR'); feed(1, [0]); } else { hub('FLR'); feed(0, [0, 1, 2]); }
+  lead(); return c;
+}
+function buildCannon(kind) {
+  const ax = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)), dx = ax ? -Math.sign(Math.sin(P.yaw)) : 0, dz = ax ? 0 : -Math.sign(Math.cos(P.yaw)), px = -dz, pz = dx;
+  const ox = Math.floor(P.x) + dx * 14, oz = Math.floor(P.z) + dz * 14, oy = Math.floor(P.y + .01), cells = cannonCells(kind), ID = { S: B.TNT, A: B.TNT, L: B.LEVER0, D: 70, F: B.STONE };
+  const put = (x, y, z, b) => { const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (wx < 2 || wx >= W - 2 || wz < 2 || wz >= D - 2 || wy < 2 || wy >= H - 2) return; applyBlock(wx, wy, wz, b); netSend({ t: 'block', x: wx, y: wy, z: wz, b }); };
+  for (let x = -14; x <= 4; x++) for (let z = -3; z <= 3; z++) { put(x, -1, z, B.STONE); for (let y = 0; y <= 4; y++) put(x, y, z, 0); }   // 整地: 床を石にして上の空間を空ける
+  const have = new Set(cells.map(q => q[0] + ',' + q[1] + ',' + q[2]));
+  for (const [x, y, z] of cells) for (let yy = y - 1; yy >= 0; yy--) { if (!have.has(x + ',' + yy + ',' + z)) { have.add(x + ',' + yy + ',' + z); put(x, yy, z, B.STONE); } }   // 粉・レバーの土台
+  for (const [x, y, z, t] of cells) put(x, y, z, ID[t]);
+  const tx = ox + dx * -12 + px * 0, tz2 = oz + dz * -12;
+  feedMsg('キャノン設置完了! 手前のレバー(' + tx + ',' + (oy + 1) + ',' + tz2 + ')を右クリックで発射。爆風は半径約10マス、離れて!', 'good');
+}
 // ---------- 自動採掘機: 真下を5x5で上から順に掘り進む(近くにいる間だけ動く)。掘った物は機械の上に出る ----------
 const miners = new Map();
 function updateMiners(dt) {
@@ -3373,11 +3399,12 @@ function shotFx(m) {
   worldFlash.position.copy(o); worldFlash.scale.setScalar(k === 2 || k === 3 ? 1 : .6); worldFlash.visible = true; worldFlashT = .05; muzzleLight.position.copy(o); muzzleLight.intensity = 2;
   SND.shot(k, { x: o.x, y: o.y, z: o.z });
 }
-function hostHandle(from, m) {
+function hostHandle(from, m) { try { hostHandle0(from, m); } catch (e) { netErr(e, m && m.t); } }
+function hostHandle0(from, m) {
   switch (m.t) {
     case 'pos': applyRemote(from, m.p); break;
     case 'block': { const old = getB(m.x, m.y, m.z); applyBlock(m.x, m.y, m.z, m.b); if (!m.b && old) { blockDebris(m.x, m.y, m.z, old); } relay(from, m); break; }
-    case 'shot': shotFx(m); relay(from, m); break;
+    case 'shot': relay(from, m); shotFx(m); break;
     case 'hitMob': damageMob(m.id, m.dmg, from, m.head, { x: m.from[0], z: m.from[1] }); break;
     case 'hitPlayer': if (m.to === net.id) hurt(m.dmg, m.src, m.by); else { const c = net.conns.get(m.to); c && c.open && c.send({ t: 'dmg', dmg: m.dmg, src: m.src, by: m.by }); } break;
     case 'ent': if (m.d) ents.set(m.i, m.d); else ents.delete(m.i); relay(from, m); panelSig = ''; break;
@@ -3386,7 +3413,10 @@ function hostHandle(from, m) {
     case 'chat': feedMsg(`${m.n}: ${m.s}`, 'chat'); relay(from, m); break;
   }
 }
-function guestHandle(m) {
+let netErrT = 0;
+function netErr(e, w) { console.error(w, e); if (performance.now() - netErrT > 5000) { netErrT = performance.now(); feedMsg('通信エラー(' + w + '): ' + (e && e.message), 'bad'); } }
+function guestHandle(m) { try { guestHandle0(m); } catch (e) { netErr(e, m && m.t); } }
+function guestHandle0(m) {
   switch (m.t) {
     case 'welcome': net.gotWelcome = true; if (m.W !== W || m.D !== D) { alert('ホストの版(マップサイズ ' + (m.W || 256) + ')と違うため参加できません。ホストも最新版のファイルにしてください。'); setStatus('版が違います'); break; } beginGame({ seed: m.seed, edits: m.edits, time: m.time, ents: m.ents, rain: m.rain }); break;
     case 'state': {
