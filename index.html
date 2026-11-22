@@ -187,7 +187,11 @@ body.touch .slot{width:44px!important;height:44px!important}
 #craft .hint{color:#4a4a4a!important}
 .tile,.hs{background:#8b8b8b!important;border:2px solid!important;border-color:#373737 #fff #fff #373737!important;border-radius:0!important}
 .tile:hover{background:#a9a9a9!important}.tile.hold,.hs.sel{outline:3px solid #fff!important}
-</style></head>
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
 <div id="tz"></div><div id="tstick"><i></i></div>
@@ -231,6 +235,27 @@ body.touch .slot{width:44px!important;height:44px!important}
   <div class="logo">Nine<b>Craft</b></div>
   <div class="sub">掘って、作って、育てて、撃って、生き延びろ。<br>道具・かまど・農業・クリーパー…マイクラ風サバイバル+銃MOD。友達と部屋コードで協力プレイ。</div>
   <div class="two"><div><label>プレイヤー名</label><input id="name" maxlength="12"></div><div><label>ワールドシード(空欄でランダム)</label><input id="seed" maxlength="20" placeholder="例: minecraft"></div></div>
+  <div id="acctBox" style="margin:6px 0;padding:8px;border:2px solid #555;background:rgba(0,0,0,.3)">
+    <div id="acctInfo" style="font-size:13px;margin-bottom:6px"></div>
+    <div id="acctForm" style="display:none">
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><input id="acId" placeholder="ID(英数字_ 3〜16)" maxlength="16" style="flex:1;min-width:110px"><input id="acName" placeholder="表示名(新規のみ)" maxlength="12" style="flex:1;min-width:110px"><input id="acPw" type="password" placeholder="パスワード(6文字以上)" style="flex:1;min-width:110px"></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><button id="acLogin" style="flex:1">ログイン</button><button id="acReg" style="flex:1">新規登録</button></div>
+    </div>
+    <button id="acOut" style="display:none">ログアウト</button>
+    <div id="acStat" style="font-size:12px;margin-top:4px;color:#ffd166"></div>
+    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button id="fbCfgBtn" style="flex:1">⚙ Firebase設定</button><button id="acManage" style="flex:1;display:none">アカウント設定</button></div>
+    <div id="fbCfgPanel" style="display:none;margin-top:6px">
+      <div style="font-size:12px;margin-bottom:4px">Firebaseコンソールの <b>firebaseConfig</b>(<code>{ apiKey: ..., ... }</code>)を、そのまま貼り付けてください。</div>
+      <textarea id="fbCfgText" rows="6" style="width:100%;box-sizing:border-box;background:#000;color:#fff;border:2px solid #a0a0a0;font-size:12px" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  databaseURL: &quot;https://...firebasedatabase.app&quot;,&#10;  projectId: &quot;...&quot;,&#10;  appId: &quot;...&quot;&#10;};"></textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button id="fbCfgSave" style="flex:1">保存して再読み込み</button><button id="fbCfgTest" style="flex:1">接続テスト</button><button id="fbCfgClear" style="flex:1">設定を消す</button></div>
+      <pre id="fbTestOut" style="font-size:12px;white-space:pre-wrap;margin:6px 0 0"></pre>
+    </div>
+    <div id="acManagePanel" style="display:none;margin-top:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><input id="acNewName" placeholder="新しい表示名" maxlength="12" style="flex:1;min-width:110px"><button id="acChName">表示名を変更</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><input id="acOldPw" type="password" placeholder="現在のパスワード" style="flex:1;min-width:110px"><input id="acNewPw" type="password" placeholder="新しいパスワード" style="flex:1;min-width:110px"><button id="acChPw">パスワード変更</button></div>
+      <div style="margin-top:6px"><button id="acDel" style="background:#8a2a2a!important">アカウントを削除(現在のパスワードが必要)</button></div>
+    </div>
+  </div>
   <div style="margin:6px 0"><label>ゲームモード</label> <select id="gmode"><option value="s">サバイバル</option><option value="c">クリエイティブ(飛行・無限ブロック・即破壊)</option></select></div>
   <div class="stack">
     <button id="btnCont" style="display:none" class="alt">▶ 続きから(ソロ)</button>
@@ -263,7 +288,7 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const W = 384, H = 64, D = 384, CS = 16, NCX = W / CS, NCZ = D / CS, SEA = 22;
 const DAY = 1200;                      // 1日(秒) = 本家と同じ20分
 const PW = 0.3, PH = 1.8, EYE = 1.62;
-const TILE = 16, CELL = 40, GUT = 4, ACOLS = 8, AROWS = 9, AW = ACOLS * CELL, AH = AROWS * CELL;
+const TILE = 16, CELL = 40, GUT = 4, ACOLS = 8, AROWS = 11, AW = ACOLS * CELL, AH = AROWS * CELL;
 
 // ---------- ハッシュ / ノイズ ----------
 function h2(x, z, s) {
@@ -293,9 +318,9 @@ function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 // ---------- ブロック ----------
 const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG: 5, LEAVES: 6, PLANKS: 7, SAND: 8, COAL: 9, IRON: 10, BEDROCK: 11, WATER: 12, TALLGRASS: 13, FLOWER_R: 14, FLOWER_Y: 15, TORCH: 16,
   GLASS: 17, GOLD: 18, DIAMOND: 19, CRAFT: 20, FURNACE: 21, CHEST: 22, FARM: 23, WHEAT0: 24, WHEAT1: 25, WHEAT2: 26, BED: 27, GRAVEL: 28 };
-const NB = 120;
+const NB = 132;
 Object.assign(B, { WF1: 29, WF2: 30, WF3: 31, WF4: 32, WF5: 33, WF6: 34, WF7: 35, LAVA: 36, LF1: 37, LF2: 38, LF3: 39, DOOR0: 40, OBSIDIAN: 56, CACTUS: 57, SNOW: 58, ICE: 59,
-  RSORE: 60, LEVER0: 61, LEVER1: 62, LAMP0: 63, LAMP1: 64, RSTORCH1: 65, RSTORCH0: 66, DUST0: 70, PISTON0: 86, ENCH: 100, SHELF: 101, NETHERRACK: 102, SOULSAND: 103, GLOWSTONE: 104, PORTAL: 105, ENDSTONE: 106, EFRAME: 107, EPORTAL: 108, BUTTON0: 110, BUTTON1: 111, TNT: 112, MINER: 113, RAIL: 114 });
+  RSORE: 60, LEVER0: 61, LEVER1: 62, LAMP0: 63, LAMP1: 64, RSTORCH1: 65, RSTORCH0: 66, DUST0: 70, PISTON0: 86, ENCH: 100, SHELF: 101, NETHERRACK: 102, SOULSAND: 103, GLOWSTONE: 104, PORTAL: 105, ENDSTONE: 106, EFRAME: 107, EPORTAL: 108, BUTTON0: 110, BUTTON1: 111, TNT: 112, MINER: 113, RAIL: 114, DISP0: 117, REP0: 121 });
 // 流体・ドア・レッドストーンの判定
 const isWater = b => b === 12 || (b >= 29 && b <= 35), isLava = b => b === 36 || (b >= 37 && b <= 39), isFluid = b => isWater(b) || isLava(b);
 const isDoor = b => b >= 40 && b <= 55, doorTop = b => (b - 40) & 8, doorOpen = b => (b - 40) & 4, doorFace = b => (b - 40) & 3;
@@ -304,10 +329,11 @@ const fluidLevel = b => b === 12 ? 0 : b >= 29 && b <= 35 ? b - 28 : b === 36 ? 
 const waterId = l => l === 0 ? 12 : 28 + l, lavaId = l => l === 0 ? 36 : 36 + l;
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, COBBLE: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7, PLANKS: 8, SAND: 9, COAL: 10, IRON: 11, BEDROCK: 12, TALLGRASS: 13, FLOWER_R: 14, FLOWER_Y: 15, TORCH: 16,
   GLASS: 17, GOLD: 18, DIAMOND: 19, CRAFT_TOP: 20, CRAFT_SIDE: 21, FURN_FRONT: 22, FURN_TOP: 23, CHEST_SIDE: 24, CHEST_TOP: 25, FARM_TOP: 26, WHEAT0: 27, WHEAT1: 28, WHEAT2: 29, BED_TOP: 30, BED_SIDE: 31, GRAVEL: 32, NTILES: 33 };
-Object.assign(T, { LAVA: 33, DOOR_B: 34, DOOR_T: 35, OBSIDIAN: 36, CACTUS_SIDE: 37, CACTUS_TOP: 38, SNOW: 39, ICE: 40, RSORE: 41, DUST_OFF: 42, DUST_ON: 43, LEVER: 44, LAMP_OFF: 45, LAMP_ON: 46, RST_ON: 47, RST_OFF: 48, PISTON_SIDE: 49, PISTON_TOP: 50, ENCH_TOP: 51, ENCH_SIDE: 52, SHELF: 53, NETHERRACK: 54, SOULSAND: 55, GLOWSTONE: 56, PORTAL: 57, ENDSTONE: 58, EFRAME_TOP: 59, EFRAME_SIDE: 60, BUTTON: 61, TNT_SIDE: 62, TNT_TOP: 63, MINER_TOP: 64, MINER_SIDE: 65, RAIL: 66, NTILES: 67 });
+Object.assign(T, { LAVA: 33, DOOR_B: 34, DOOR_T: 35, OBSIDIAN: 36, CACTUS_SIDE: 37, CACTUS_TOP: 38, SNOW: 39, ICE: 40, RSORE: 41, DUST_OFF: 42, DUST_ON: 43, LEVER: 44, LAMP_OFF: 45, LAMP_ON: 46, RST_ON: 47, RST_OFF: 48, PISTON_SIDE: 49, PISTON_TOP: 50, ENCH_TOP: 51, ENCH_SIDE: 52, SHELF: 53, NETHERRACK: 54, SOULSAND: 55, GLOWSTONE: 56, PORTAL: 57, ENDSTONE: 58, EFRAME_TOP: 59, EFRAME_SIDE: 60, BUTTON: 61, TNT_SIDE: 62, TNT_TOP: 63, MINER_TOP: 64, MINER_SIDE: 65, RAIL: 66, DISP_SIDE: 67, DISP_TOP: 68, REP_OFF: 72, REP_ON: 76, NTILES: 80 });
 // [top, side, bottom]
 const BTILE = [];
 const bt = (b, t, s, d) => { BTILE[b] = [t, s === undefined ? t : s, d === undefined ? (s === undefined ? t : s) : d]; };
+for (let d = 0; d < 4; d++) { bt(B.DISP0 + d, T.DISP_TOP + d, T.DISP_SIDE, T.DISP_SIDE); bt(B.REP0 + d, T.REP_OFF + d); bt(B.REP0 + 4 + d, T.REP_ON + d); }
 bt(B.TNT, T.TNT_TOP, T.TNT_SIDE, T.TNT_TOP); bt(B.MINER, T.MINER_TOP, T.MINER_SIDE, T.MINER_TOP); bt(B.RAIL, T.RAIL);
 bt(B.GRASS, T.GRASS_TOP, T.GRASS_SIDE, T.DIRT); bt(B.DIRT, T.DIRT); bt(B.STONE, T.STONE); bt(B.COBBLE, T.COBBLE);
 bt(B.LOG, T.LOG_TOP, T.LOG_SIDE, T.LOG_TOP); bt(B.LEAVES, T.LEAVES); bt(B.PLANKS, T.PLANKS); bt(B.SAND, T.SAND);
@@ -349,7 +375,7 @@ for (let b = 36; b <= 39; b++) LIGHT[b] = b === 36 ? 15 : 12;
 const SHAPE = new Uint8Array(NB);     // 1=薄い板などカスタム形状(ブロック直方体では描かない)
 for (let b = 40; b <= 55; b++) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = doorOpen(b) ? 0 : 1; }
 for (let b = 70; b <= 85; b++) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = 0; }
-for (const b of [B.LEVER0, B.LEVER1, B.BUTTON0, B.BUTTON1, B.RSTORCH0, B.RSTORCH1, B.PORTAL, B.EPORTAL, B.RAIL]) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = 0; }
+for (const b of [B.LEVER0, B.LEVER1, B.BUTTON0, B.BUTTON1, B.RSTORCH0, B.RSTORCH1, B.PORTAL, B.EPORTAL, B.RAIL, ...[0, 1, 2, 3, 4, 5, 6, 7].map(k => B.REP0 + k)]) { CUBE[b] = 0; SHAPE[b] = 1; OPAC[b] = 0; SOLIDB[b] = 0; }
 CUBE[B.EPORTAL] = 0; LIGHT[B.GLOWSTONE] = 15; LIGHT[B.LAMP1] = 15; LIGHT[B.RSTORCH1] = 7; LIGHT[B.PORTAL] = 11; OPAC[B.GLASS] = 0; OPAC[B.ICE] = 3;
 for (const b of [B.OBSIDIAN, B.RSORE, B.ENCH, B.NETHERRACK, B.ENDSTONE, B.PISTON0]) { ROCK[b] = 1; TOOLOF[b] = 'pick'; }
 for (const b of [B.SHELF]) TOOLOF[b] = 'axe';
@@ -359,7 +385,7 @@ for (let b = 86; b <= 99; b++) { ROCK[b] = 1; TOOLOF[b] = 'pick'; }
 REQ[B.OBSIDIAN] = 4; REQ[B.RSORE] = 3; REQ[B.ENCH] = 1; REQ[B.NETHERRACK] = 1; REQ[B.ENDSTONE] = 1;
 Object.assign(HARD, { [B.OBSIDIAN]: 40, [B.CACTUS]: .4, [B.SNOW]: .2, [B.ICE]: .5, [B.RSORE]: 3.4, [B.LEVER0]: .5, [B.LEVER1]: .5, [B.LAMP0]: .3, [B.LAMP1]: .3, [B.RSTORCH0]: .05, [B.RSTORCH1]: .05,
   [B.ENCH]: 4, [B.SHELF]: 1.5, [B.NETHERRACK]: .5, [B.SOULSAND]: .5, [B.GLOWSTONE]: .4, [B.PORTAL]: 1e9, [B.ENDSTONE]: 3, [B.EFRAME]: 1e9, [B.EPORTAL]: 1e9, [B.BUTTON0]: .5, [B.BUTTON1]: .5 });
-for (let b = 40; b <= 55; b++) HARD[b] = 1.0; for (let b = 70; b <= 85; b++) HARD[b] = .05; for (let b = 86; b <= 99; b++) HARD[b] = 1.5; for (let b = 29; b < 40; b++) HARD[b] = 1e9; HARD[B.WATER] = HARD[B.LAVA] = 1e9; HARD[B.TNT] = .1; HARD[B.MINER] = 2; HARD[B.RAIL] = .1;
+for (let b = 40; b <= 55; b++) HARD[b] = 1.0; for (let b = 70; b <= 85; b++) HARD[b] = .05; for (let b = 86; b <= 99; b++) HARD[b] = 1.5; for (let b = 29; b < 40; b++) HARD[b] = 1e9; HARD[B.WATER] = HARD[B.LAVA] = 1e9; for (let d = 0; d < 4; d++) HARD[B.DISP0 + d] = 2; for (let d = 0; d < 8; d++) HARD[B.REP0 + d] = .1; HARD[B.TNT] = .1; HARD[B.MINER] = 2; HARD[B.RAIL] = .1;
 const TOOLMAX = [0, 59, 131, 250, 1561], TOOLSPD = [1, 2.2, 4, 6, 8], TIERJP = ['素手', '木の', '石の', '鉄の', 'ダイヤの'], TOOLJP = { pick: 'ツルハシ', axe: '斧', shovel: 'シャベル', sword: '剣' };
 const SWORDDMG = [1, 4, 5, 6, 7];
 const ARMORRED = [0, .2, .45, .6], ARMORJP = ['なし', '革の防具', '鉄の防具', 'ダイヤの防具'];
@@ -371,7 +397,7 @@ BSND[B.DIRT] = 'dirt'; BSND[B.FARM] = 'dirt'; BSND[B.SAND] = 'sand'; BSND[B.GRAV
 const DROPKEY = []; DROPKEY[B.GRASS] = 'dirt'; DROPKEY[B.DIRT] = 'dirt'; DROPKEY[B.STONE] = 'cobble'; DROPKEY[B.COBBLE] = 'cobble';
 DROPKEY[B.LOG] = 'log'; DROPKEY[B.PLANKS] = 'planks'; DROPKEY[B.SAND] = 'sand'; DROPKEY[B.COAL] = 'coal'; DROPKEY[B.IRON] = 'iron'; DROPKEY[B.TORCH] = 'torch';
 DROPKEY[B.GOLD] = 'gold'; DROPKEY[B.DIAMOND] = 'diamond'; DROPKEY[B.CRAFT] = 'craft'; DROPKEY[B.FURNACE] = 'furnace'; DROPKEY[B.CHEST] = 'chest'; DROPKEY[B.FARM] = 'dirt';
-DROPKEY[B.BED] = 'bed'; DROPKEY[B.TNT] = 'tnt'; DROPKEY[B.MINER] = 'miner'; DROPKEY[B.RAIL] = 'rail'; DROPKEY[B.GRAVEL] = 'gravel'; DROPKEY[B.WHEAT2] = 'wheat';
+DROPKEY[B.BED] = 'bed'; for (let d = 0; d < 4; d++) DROPKEY[B.DISP0 + d] = 'dispenser'; for (let d = 0; d < 8; d++) DROPKEY[B.REP0 + d] = 'repeater'; DROPKEY[B.TNT] = 'tnt'; DROPKEY[B.MINER] = 'miner'; DROPKEY[B.RAIL] = 'rail'; DROPKEY[B.GRAVEL] = 'gravel'; DROPKEY[B.WHEAT2] = 'wheat';
 for (const b of [B.SNOW]) BSND[b] = 'grass'; BSND[B.SOULSAND] = 'sand'; BSND[B.GLASS] = 'glass'; BSND[B.ICE] = 'glass'; BSND[B.TNT] = 'grass'; BSND[B.RAIL] = 'wood'; BSND[B.MINER] = 'stone';
 for (let b = 40; b <= 55; b++) BSND[b] = 'wood'; BSND[B.SHELF] = 'wood'; BSND[B.LEVER0] = BSND[B.LEVER1] = 'wood'; BSND[B.CACTUS] = 'grass';
 Object.assign(DROPKEY, { [B.OBSIDIAN]: 'obsidian', [B.CACTUS]: 'cactus', [B.SNOW]: 'snow', [B.RSORE]: 'redstone', [B.LEVER0]: 'lever', [B.LEVER1]: 'lever', [B.LAMP0]: 'lamp', [B.LAMP1]: 'lamp', [B.RSTORCH0]: 'rstorch', [B.RSTORCH1]: 'rstorch',
@@ -380,14 +406,14 @@ for (let b = 40; b <= 55; b++) DROPKEY[b] = 'door'; for (let b = 70; b <= 85; b+
 const XPORE = { [B.COAL]: 2, [B.IRON]: 1, [B.GOLD]: 2, [B.DIAMOND]: 6, [B.RSORE]: 3 };
 // ---------- アイテム ----------
 // 個数制インベントリ。置けるもの(ITEMB)・食べ物(FOOD)・素材
-const ITEMB = { obsidian: B.OBSIDIAN, cactus: B.CACTUS, snow: B.SNOW, redstone: B.DUST0, lever: B.LEVER0, lamp: B.LAMP0, rstorch: B.RSTORCH1, ench: B.ENCH, shelf: B.SHELF, netherrack: B.NETHERRACK, soulsand: B.SOULSAND, glowstone: B.GLOWSTONE, endstone: B.ENDSTONE, button: B.BUTTON0, piston: B.PISTON0, dirt: B.DIRT, cobble: B.COBBLE, planks: B.PLANKS, log: B.LOG, sand: B.SAND, torch: B.TORCH, glass: B.GLASS, stone: B.STONE, gravel: B.GRAVEL, craft: B.CRAFT, furnace: B.FURNACE, chest: B.CHEST, bed: B.BED, tnt: B.TNT, miner: B.MINER, rail: B.RAIL };
+const ITEMB = { obsidian: B.OBSIDIAN, cactus: B.CACTUS, snow: B.SNOW, redstone: B.DUST0, lever: B.LEVER0, lamp: B.LAMP0, rstorch: B.RSTORCH1, ench: B.ENCH, shelf: B.SHELF, netherrack: B.NETHERRACK, soulsand: B.SOULSAND, glowstone: B.GLOWSTONE, endstone: B.ENDSTONE, button: B.BUTTON0, piston: B.PISTON0, dirt: B.DIRT, cobble: B.COBBLE, planks: B.PLANKS, log: B.LOG, sand: B.SAND, torch: B.TORCH, glass: B.GLASS, stone: B.STONE, gravel: B.GRAVEL, craft: B.CRAFT, furnace: B.FURNACE, chest: B.CHEST, bed: B.BED, tnt: B.TNT, miner: B.MINER, rail: B.RAIL, repeater: B.REP0, dispenser: B.DISP0 };
 const FOOD = { apple: [4, 2.4], raw: [2, 1.2], cooked: [8, 12.8], bread: [5, 6], fish: [2, .4], cookedfish: [5, 6], };
 const SPECIAL = { door: 1, bucket: 1, wbucket: 1, lbucket: 1, rod: 1, fas: 1, boat: 1, cart: 1, horse: 1 };   // [満腹度, 隠し満腹度]
 const INVJP = { dirt: '土', cobble: '丸石', planks: '板材', log: '原木', sand: '砂', torch: '松明', coal: '石炭', iron: '鉄鉱石', ingot: '鉄インゴット', gold: '金鉱石', goldingot: '金インゴット', diamond: 'ダイヤ', stick: '棒', glass: 'ガラス', stone: '石', gravel: '砂利',
   craft: '作業台', furnace: 'かまど', chest: 'チェスト', bed: 'ベッド', seeds: '種', wheat: '小麦', bread: 'パン', apple: 'リンゴ', raw: '生肉', cooked: '焼き肉', wool: '羊毛', leather: '革', ammo: '9mm弾', shells: '散弾', slugs: 'ライフル弾', door: 'ドア', obsidian: '黒曜石', cactus: 'サボテン', snow: '雪ブロック', redstone: 'レッドストーン', lever: 'レバー', lamp: 'レッドストーンランプ', rstorch: 'レッドストーントーチ', ench: 'エンチャント台', shelf: '本棚', netherrack: 'ネザーラック', soulsand: 'ソウルサンド', glowstone: 'グロウストーン', endstone: 'エンドストーン', button: 'ボタン', piston: 'ピストン', bucket: 'バケツ', wbucket: '水バケツ', lbucket: '溶岩バケツ', rod: '釣り竿', fish: '生魚', cookedfish: '焼き魚', string: '糸', flint: 'フリント', fas: '火打ち石と打ち金', book: '本', pearl: 'エンダーパール', eye: 'エンダーアイ', blaze: 'ブレイズロッド', g0: 'ハンドガン', g1: 'アサルトライフル', g2: 'ショットガン', g3: 'スナイパー' };
 const GUNIDX = { g0: 0, g1: 1, g2: 2, g3: 3, g4: 4, g5: 5, g6: 6, g7: 7, g8: 8 };
 ['ハンドガン', 'アサルトライフル', 'ショットガン', 'スナイパー', 'サブマシンガン', 'マグナム', 'マークスマン', '軽機関銃', 'RPG-7'].forEach((nm, i) => { INVJP['g' + i] = nm; });
-INVJP.boat = 'ボート'; INVJP.tnt = 'TNT'; INVJP.miner = '自動採掘機'; INVJP.rail = 'レール'; INVJP.cart = 'トロッコ'; INVJP.horse = '馬'; INVJP.rockets = 'ロケット弾';
+INVJP.boat = 'ボート'; INVJP.repeater = 'リピーター'; INVJP.dispenser = 'ディスペンサー'; INVJP.tnt = 'TNT'; INVJP.miner = '自動採掘機'; INVJP.rail = 'レール'; INVJP.cart = 'トロッコ'; INVJP.horse = '馬'; INVJP.rockets = 'ロケット弾';
 const ITEMKEYS = Object.keys(INVJP);
 const USABLE = k => ITEMB[k] !== undefined || FOOD[k] !== undefined || k === 'seeds' || SPECIAL[k] || k === 'eye' || GUNIDX[k] !== undefined;
 const FUEL = { coal: 80, log: 15, planks: 7.5, stick: 5 };            // 燃焼秒数
@@ -463,6 +489,8 @@ function mkRecipes() {
   sh('軽機関銃', ['III', 'KII', 'P R'], { weapon: 7 }, 'gun:7');
   sh('ボート', ['P P', 'PPP'], { give: { boat: 1 } }, 'item:boat');
   sh('RPG-7', ['III', 'KPI', '  P'], { weapon: 8 }, 'gun:8');
+  sh('リピーター', ['RRR', 'CCC'], { give: { repeater: 1 } }, 'item:repeater');
+  sh('ディスペンサー', ['CCC', 'CIC', 'CRC'], { give: { dispenser: 1 } }, 'item:dispenser');
   ls('★キャノン設置・直射(TNT4)', ['tnt', 'tnt', 'tnt', 'tnt'], { build: 'direct', give: {} }, 'item:tnt');
   ls('★キャノン設置・迫撃A近(TNT2)', ['tnt', 'tnt'], { build: 'mortar1', give: {} }, 'item:tnt');
   ls('★キャノン設置・迫撃B中(TNT3)', ['tnt', 'tnt', 'tnt'], { build: 'mortar2', give: {} }, 'item:tnt');
@@ -698,6 +726,17 @@ TILEFN[T.TNT_SIDE] = (x, y) => { if (y >= 5 && y <= 10) return (y >= 6 && y <= 9
 TILEFN[T.TNT_TOP] = (x, y) => (x >= 6 && x <= 9 && y >= 6 && y <= 9) ? jit([40, 40, 40], 4, x, y, 1044) : jit([196, 170, 120], 8, x, y, 1045);
 TILEFN[T.MINER_TOP] = (x, y) => (x >= 5 && x <= 10 && y >= 5 && y <= 10) ? jit([30, 30, 34], 4, x, y, 1051) : (x % 4 === 0 || y % 4 === 0) ? jit([80, 86, 92], 5, x, y, 1052) : jit([140, 148, 156], 6, x, y, 1053);
 TILEFN[T.MINER_SIDE] = (x, y) => (y === 2 || y === 13) ? jit([230, 150, 30], 8, x, y, 1054) : (x === 0 || x === 15) ? jit([60, 64, 70], 4, x, y, 1055) : (x >= 6 && x <= 9 && y >= 6 && y <= 9) ? jit([60, 64, 70], 4, x, y, 1056) : jit([128, 136, 146], 6, x, y, 1057);
+const arrowIn = (x, y, d) => { const px = x + .5 - 8, py = y + .5 - 8, [ax, ay] = [[1, 0], [-1, 0], [0, 1], [0, -1]][d], u = px * ax + py * ay, v = Math.abs(-px * ay + py * ax); return (u >= -5 && u <= 2 && v <= 1.2) || (u >= 1 && u <= 6 && v <= (6.5 - u) * .9); };   // 0:+x(右) 1:-x(左) 2:+z(下) 3:-z(上)
+TILEFN[T.DISP_SIDE] = (x, y) => (x >= 5 && x <= 10 && y >= 5 && y <= 10) ? jit([30, 30, 34], 4, x, y, 1071) : (x === 0 || y === 0 || x === 15 || y === 15) ? jit([80, 80, 86], 4, x, y, 1072) : jit([122, 122, 128], 8, x, y, 1073);
+for (let d = 0; d < 4; d++) {
+  TILEFN[T.DISP_TOP + d] = (x, y) => arrowIn(x, y, d) ? jit([235, 235, 240], 4, x, y, 1074) : (x === 0 || y === 0 || x === 15 || y === 15) ? jit([80, 80, 86], 4, x, y, 1072) : jit([122, 122, 128], 8, x, y, 1073);
+  for (const on of [0, 1]) TILEFN[(on ? T.REP_ON : T.REP_OFF) + d] = (x, y) => {
+    const ax = [[1, 0], [-1, 0], [0, 1], [0, -1]][d], cx = x - 7.5, cy = y - 7.5, u = cx * ax[0] + cy * ax[1];
+    if (Math.hypot(cx - ax[0] * -5, cy - ax[1] * -5) < 1.9 || Math.hypot(cx - ax[0] * 3, cy - ax[1] * 3) < 1.9) return on ? jit([255, 70, 40], 6, x, y, 1075) : jit([110, 30, 25], 4, x, y, 1076);   // 入力側/出力側のトーチ
+    if (arrowIn(x, y, d) && Math.abs(u) < 5) return on ? jit([240, 50, 40], 6, x, y, 1077) : jit([95, 95, 102], 4, x, y, 1078);
+    return (x === 0 || y === 0 || x === 15 || y === 15) ? jit([120, 120, 126], 4, x, y, 1079) : jit([170, 170, 176], 6, x, y, 1080);
+  };
+}
 TILEFN[T.RAIL] = (x, y) => (x >= 3 && x <= 4) || (x >= 11 && x <= 12) ? jit([170, 172, 178], 6, x, y, 1061) : (x >= 2 && x <= 13 && (y % 5 === 1 || y % 5 === 2)) ? jit([112, 82, 46], 6, x, y, 1062) : null;
 
 const tileCanvas = [], tileAvg = [];
@@ -1254,6 +1293,9 @@ function buildChunk(ci) {
         box(S, x + R[0], y + R[1], z + R[2], x + R[3], y + R[4], z + R[5], full, sky, blk, false, false);
       } else if (isDust(b)) {
         const l = [sky, blk, 1]; quad(S, [[x, y + .02, z + 1], [x + 1, y + .02, z + 1], [x + 1, y + .02, z], [x, y + .02, z]], [[tt[0], tt[1]], [tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]]], [l, l, l, l], false);
+      } else if (b >= B.REP0 && b <= B.REP0 + 7) {
+        const l = [sky, blk, 1];
+        quad(S, [[x, y + .13, z + 1], [x + 1, y + .13, z + 1], [x + 1, y + .13, z], [x, y + .13, z]], [[tt[0], tt[1]], [tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]]], [l, l, l, l], false);
       } else if (b === B.RAIL) {
         const l = [sky, blk, 1], ax = (getB(x - 1, y, z) === B.RAIL || getB(x + 1, y, z) === B.RAIL) && !(getB(x, y, z - 1) === B.RAIL || getB(x, y, z + 1) === B.RAIL);
         const uv = ax ? [[tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]], [tt[0], tt[1]]] : [[tt[0], tt[1]], [tt[2], tt[1]], [tt[2], tt[3]], [tt[0], tt[3]]];
@@ -2312,6 +2354,21 @@ function rsEnqueue(x, y, z) {
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (inb(x + dx, y + 2, z + dz)) rsQ.add(bidx(x + dx, y + 2, z + dz));
 }
 const dustLv = b => isDust(b) ? b - 70 : 0;
+const isRep = b => b >= B.REP0 && b <= B.REP0 + 7, isDisp = b => b >= B.DISP0 && b <= B.DISP0 + 3, repOn = b => b >= B.REP0 + 4, repDir = b => (b - B.REP0) & 3, DIR4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const repTimers = new Map(), dispOn = new Set();
+// このセルへ向けて出力しているONのリピーターが隣にあるか
+function repFeeds(x, y, z) { for (const [dx, dz] of DIR4) { const n = getB(x + dx, y, z + dz); if (isRep(n) && repOn(n)) { const f = DIR4[repDir(n)]; if (x + dx + f[0] === x && z + dz + f[1] === z) return true; } } return false; }
+function repIn(x, y, z, b) { const f = DIR4[repDir(b)], bx = x - f[0], bz = z - f[1], n = getB(bx, y, bz); if (n === B.LEVER1 || n === B.BUTTON1 || n === B.RSTORCH1 || (isDust(n) && n > 70)) return true; if (isRep(n) && repOn(n)) { const g = DIR4[repDir(n)]; return bx + g[0] === x && bz + g[1] === z; } return false; }
+function tickRep(ch) {
+  for (const [i, tm] of [...repTimers]) { if (--tm.t > 0) continue; repTimers.delete(i); const b = blocks[i]; if (!isRep(b) || repOn(b) === tm.to) continue; const y = (i / (W * D)) | 0, r = i - y * W * D, z = (r / W) | 0, x = r - z * W, nb = B.REP0 + repDir(b) + (tm.to ? 4 : 0); if (applyBlock(x, y, z, nb, true)) ch.push([x, y, z, nb]); }
+}
+function fireDispenser(x, y, z, b) {
+  const i = bidx(x, y, z), e = ents.get(i); if (!e || !e.it) return; const [dx, dz] = DIR4[b - B.DISP0], px = x + dx + .5, py = y + .5, pz = z + dz + .5;
+  if (e.it.tnt > 0) { e.it.tnt--; spawnTntEntity(px, py, pz, 4, dx * 5, 2.5, dz * 5); }
+  else if (e.it.rockets > 0) { e.it.rockets--; launchRocket(null, { x: dx, y: .12, z: dz }, { x: px, y: py, z: pz }, true); }
+  else { SND.click(.4); return; }
+  netSend({ t: 'ent', i, d: e }); SND.click(.8);
+}
 const H4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // 信号源が隣接(6方向)しているか。除外: 上の松明(自分の支持ブロック判定用)
 function srcAdj(x, y, z, noTorch) {
@@ -2319,12 +2376,13 @@ function srcAdj(x, y, z, noTorch) {
     const n = getB(x + dx, y + dy, z + dz);
     if (n === B.LEVER1 || n === B.BUTTON1) return true;
     if (!noTorch && n === B.RSTORCH1) return true;
+    if (isRep(n) && repOn(n) && dy === 0) { const f = DIR4[repDir(n)]; if (x + dx + f[0] === x && z + dz + f[1] === z) return true; }
     if (isDust(n) && n > 70 && (dy !== 0 || true)) { if (dy === 0 || dy === 1 || dy === -1) return true; }
   }
   return false;
 }
 function dustNext(x, y, z) {
-  let best = 0;
+  let best = repFeeds(x, y, z) ? 15 : 0;
   const here = (n, d) => { if (n === B.LEVER1 || n === B.BUTTON1 || n === B.RSTORCH1) best = 15; else if (isDust(n) && n - 70 - d > best) best = n - 70 - d; };
   for (const [dx, dz] of H4) {
     here(getB(x + dx, y, z + dz), 1);
@@ -2336,6 +2394,7 @@ function dustNext(x, y, z) {
   return best;
 }
 function blockPowered(x, y, z) {   // 支持ブロック(トーチ用)が水平方向の信号で駆動されているか
+  if (repFeeds(x, y, z)) return true;
   for (const [dx, dz] of H4) { const n = getB(x + dx, y, z + dz); if (n === B.LEVER1 || n === B.BUTTON1 || (isDust(n) && n > 70)) return true; }
   const dn = getB(x, y - 1, z); return dn === B.LEVER1 || dn === B.BUTTON1 || (isDust(dn) && dn > 70);
 }
@@ -2346,8 +2405,9 @@ function pistonPush(x, y, z, ch) {
   ch.push([x, y + 1, z, 88]); applyBlock(x, y + 1, z, 88, true); return true;
 }
 function stepRedstone(dt) {
-  rsT += dt; if (rsT < .12 || !rsQ.size) return; rsT = 0;
-  const list = [...rsQ].slice(0, 300), ch = []; for (const i of list) rsQ.delete(i);
+  rsT += dt; if (rsT < .12) return; rsT = 0;
+  const ch = []; tickRep(ch); if (!rsQ.size) { flushCh(ch); return; }
+  const list = [...rsQ].slice(0, 300); for (const i of list) rsQ.delete(i);
   const plan = [];
   for (const i of list) {
     const y = (i / (W * D)) | 0, r = i - y * W * D, z = (r / W) | 0, x = r - z * W, b = blocks[i];
@@ -2360,7 +2420,9 @@ function stepRedstone(dt) {
       const on = srcAdj(x, y, z, false);
       if (on && b === B.PISTON0) { if (pistonPush(x, y, z, ch)) plan.push([x, y, z, B.PISTON0 + 1]); }
       else if (!on && b === B.PISTON0 + 1) { if (getB(x, y + 1, z) === 88) plan.push([x, y + 1, z, 0]); plan.push([x, y, z, B.PISTON0]); }
-    } else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, tntFuseAt(x, y, z)); }
+    } else if (isRep(b)) { const on = repIn(x, y, z, b); if (on !== repOn(b)) { if (!repTimers.has(i)) repTimers.set(i, { to: on, t: (ents.get(i) || {}).dl || 1 }); } else repTimers.delete(i); }
+    else if (isDisp(b)) { const on = srcAdj(x, y, z, false); if (on && !dispOn.has(i)) { dispOn.add(i); fireDispenser(x, y, z, b); } else if (!on) dispOn.delete(i); }
+    else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, tntFuseAt(x, y, z)); }
     else if (b === 88 && (getB(x, y - 1, z) < 86 || getB(x, y - 1, z) > 87)) plan.push([x, y, z, 0]);
   }
   for (const [x, y, z, b] of plan) if (applyBlock(x, y, z, b, true)) ch.push([x, y, z, b]);
@@ -2456,8 +2518,8 @@ function buildFramePortal(x, y, z) {   // 床(x,y,z)上にポータル枠(Xに�
   for (let a = -2; a <= 3; a++) for (let b = -1; b <= 5; b++) for (let c = -2; c <= 2; c++) { const bx = x + a, by = y + b, bz = z + c; if (by === y - 1) blocks[bidx(bx, by, bz)] = B.NETHERRACK; else if (by >= y) blocks[bidx(bx, by, bz)] = 0; }
   for (let a = 0; a < 4; a++) for (let b = 0; b < 5; b++) { const edge = a === 0 || a === 3 || b === 0 || b === 4; blocks[bidx(x + a - 1, y + b - 1 + 1, z)] = edge ? B.OBSIDIAN : B.PORTAL; }
 }
-function enterDim(to) {
-  if (net.role !== 'solo') { feedMsg('ネザー/エンドはソロでのみ遊べます', 'bad'); return; }
+function enterDim(to, fromNet) {
+  if (net.role === 'guest' && !fromNet) { netSend({ t: 'dimReq', to }); portalT = -2.5; return; }   // 参加者はホストに依頼(全員で移動)
   if (to === dim) return;
   if (dim === 'ow') owSave = { blocks: blocks.slice(), edits: new Map(edits), x: P.x, y: P.y, z: P.z, time: worldTime };
   for (const id of [...mobs.keys()]) removeMob(id);
@@ -2475,8 +2537,8 @@ function enterDim(to) {
   }
   dim = to; P.x = sx + .5; P.y = sy + .1; P.z = sz + .5; P.vy = 0; P.vx = P.vz = 0; portalT = -2.5;
   fullRelight(); resetChunks(); streamChunks(true); processDirty(999);
-  if (to !== 'ow') spawnDimMobs(to);
-  if (to === 'end' && !dragonDown) { newMob(nextMob++, 'dragon', 64.5, 72, 64.5); feedMsg('エンダードラゴンが現れた!', 'bad'); }
+  if (net.role !== 'guest') { if (to !== 'ow') spawnDimMobs(to); if (to === 'end' && !dragonDown) { newMob(nextMob++, 'dragon', 64.5, 72, 64.5); feedMsg('エンダードラゴンが現れた!', 'bad'); } }
+  if (net.role === 'host') netSend({ t: 'dim', to });
   feedMsg(to === 'nether' ? 'ネザーに到着(戻るには紫のゲートへ)' : to === 'end' ? 'ジ・エンドに到着(中央のゲートで帰還)' : '地上に戻った', 'good');
 }
 function spawnDimMobs(to) {
@@ -2488,7 +2550,7 @@ function spawnDimMobs(to) {
   }
 }
 function updatePortals(dt) {
-  if (P.dead || net.role !== 'solo') return; portalT += dt;
+  if (P.dead) return; portalT += dt;
   const b = getB(Math.floor(P.x), Math.floor(P.y + .5), Math.floor(P.z)), b2 = getB(Math.floor(P.x), Math.floor(P.y), Math.floor(P.z));
   const inP = b === B.PORTAL || b2 === B.PORTAL, inE = b === B.EPORTAL || b2 === B.EPORTAL || (dim === 'end' && P.y < 47.6 && Math.hypot(P.x - 64, P.z - 64) < 1.6);
   if (portalT < 0) return;
@@ -2827,14 +2889,15 @@ function breakBlockAt(x, y, z, mine) {
   if (isDoor(b)) { const o = doorTop(b) ? y - 1 : y + 1; if (isDoor(getB(x, o, z))) { applyBlock(x, o, z, 0); netSend({ t: 'block', x, y: o, z, b: 0 }); } if (doorTop(b)) { dropsFor(0, x, y, z); } }
   applyBlock(x, y, z, 0); netSend({ t: 'block', x, y, z, b: 0 });
   blockDebris(x, y, z, b); SND.breakb(BSND[b], { x, y, z });
-  if (b === B.CHEST || b === B.FURNACE) spillEnt(bidx(x, y, z), x, y, z);
+  if (b === B.CHEST || b === B.FURNACE || isDisp(b)) spillEnt(bidx(x, y, z), x, y, z);
+  if (isRep(b)) ents.delete(bidx(x, y, z));
   if (mine) {
     const ty = TOOLOF[b], tier = ty ? P.tools[ty] : 0, ok = REQ[b] <= tier;
     if (ty && tier) useTool(ty); exhaust(.025);
     if (ok && !P.creative) { if (!(isDoor(b) && doorTop(b))) dropsFor(b, x, y, z); if (XPORE[b]) addXp(XPORE[b] + (Math.random() * XPORE[b] | 0)); }
     else if (REQ[b] && !P.creative) feedMsg('この道具では採掘できない(' + (TIERJP[REQ[b]] + TOOLJP[ty]) + 'が必要)');
   }
-  const up = getB(x, y + 1, z); if (isPlant(up) || up === B.TORCH || isDust(up) || up === B.RAIL || isLever(up) || isButton(up) || up === B.RSTORCH0 || up === B.RSTORCH1) breakBlockAt(x, y + 1, z, mine);
+  const up = getB(x, y + 1, z); if (isPlant(up) || up === B.TORCH || isDust(up) || up === B.RAIL || isRep(up) || isLever(up) || isButton(up) || up === B.RSTORCH0 || up === B.RSTORCH1) breakBlockAt(x, y + 1, z, mine);
   updateHUD();
 }
 function blockedBy(x, y, z, b) {
@@ -2844,12 +2907,13 @@ function blockedBy(x, y, z, b) {
   return false;
 }
 function placeBlock(key) {
-  const r = target(); if (!r || P.dead) return false; const b = ITEMB[key]; if (b === undefined || !P.inv[key]) return false;
+  const r = target(); if (!r || P.dead) return false; let b = ITEMB[key]; if (b === undefined || !P.inv[key]) return false;
+  if (key === 'repeater' || key === 'dispenser') { const fa = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)), fd = fa ? (Math.sin(P.yaw) > 0 ? 1 : 0) : (Math.cos(P.yaw) > 0 ? 3 : 2); b += fd; }   // 向き: 自分が向いている方向(出力/発射は向いている先)
   let x = r.x + r.nx, y = r.y + r.ny, z = r.z + r.nz;
   const cur = getB(x, y, z); if (!inb(x, y, z) || (cur && !isFluid(cur) && !isPlant(cur))) { if (isPlant(getB(r.x, r.y, r.z))) { x = r.x; y = r.y; z = r.z; } else return false; }
-  if (b === B.TORCH || b === B.RAIL || isDust(b) || isLever(b) || isButton(b) || b === B.RSTORCH1 || b === B.RSTORCH0) { if (!SOLIDB[getB(x, y - 1, z)] || !CUBE[getB(x, y - 1, z)]) { feedMsg('固いブロックの上に置けます'); return false; } }
+  if (b === B.TORCH || b === B.RAIL || isRep(b) || isDust(b) || isLever(b) || isButton(b) || b === B.RSTORCH1 || b === B.RSTORCH0) { if (!SOLIDB[getB(x, y - 1, z)] || !CUBE[getB(x, y - 1, z)]) { feedMsg('固いブロックの上に置けます'); return false; } }
   if (blockedBy(x, y, z, b)) return false;
-  P.inv[key]--; applyBlock(x, y, z, b); netSend({ t: 'block', x, y, z, b }); SND.place(); P.kick = Math.max(P.kick, .4); updateHUD(); return true;
+  P.inv[key]--; applyBlock(x, y, z, b); netSend({ t: 'block', x, y, z, b }); if (isRep(b)) { const e = { k: 'rp', dl: 1 }; ents.set(bidx(x, y, z), e); netSend({ t: 'ent', i: bidx(x, y, z), d: e }); } SND.place(); P.kick = Math.max(P.kick, .4); updateHUD(); return true;
 }
 function plantSeeds() {
   const r = target(); if (!r || P.dead || !P.inv.seeds) return false; const bb = r.b;
@@ -2897,7 +2961,8 @@ function interact() {
   if (P.dead) return false; const r = target(); if (!r) return false;
   if (r.b === B.CRAFT) { setCraft(true, 'table'); return true; }
   if (r.b === B.FURNACE) { setCraft(true, 'furnace', bidx(r.x, r.y, r.z)); return true; }
-  if (r.b === B.CHEST) { setCraft(true, 'chest', bidx(r.x, r.y, r.z)); return true; }
+  if (r.b === B.CHEST || isDisp(r.b)) { setCraft(true, 'chest', bidx(r.x, r.y, r.z)); return true; }
+  if (isRep(r.b)) { const i = bidx(r.x, r.y, r.z); let e = ents.get(i); if (!e) { e = { k: 'rp', dl: 1 }; ents.set(i, e); } e.dl = e.dl % 4 + 1; netSend({ t: 'ent', i, d: e }); feedMsg('リピーターの遅延: ' + e.dl + '(約' + (e.dl * .12).toFixed(2) + '秒)', 'good'); return true; }
   if (r.b === B.BED) { sleepIn(r.x, r.y, r.z); return true; }
   if (r.b === B.ENCH) { setCraft(true, 'ench', bidx(r.x, r.y, r.z)); return true; }
   if (isDoor(r.b)) { toggleDoor(r.x, r.y, r.z); return true; }
@@ -2990,11 +3055,13 @@ function giveLoot(by, loot, p) {
 }
 function lightLevelAt(x, y, z) { return Math.max(skyAt(x, y, z) / 15 * env.sun, blkAt(x, y, z) / 15); }
 function hurtTarget(t, dmg, src, by) { if (t.id === net.id) hurt(dmg, src, by); else { const c = net.conns.get(t.id); c && c.open && c.send({ t: 'dmg', dmg, src, by }); } }
+const wetTouch = (x, y, z) => isWater(getB(x + 1, y, z)) || isWater(getB(x - 1, y, z)) || isWater(getB(x, y + 1, z)) || isWater(getB(x, y - 1, z)) || isWater(getB(x, y, z + 1)) || isWater(getB(x, y, z - 1));
 function explodeAt0(x, y, z, r, by) {
-  const l = []; let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
+  const centerWet = isWater(getB(Math.floor(x), Math.floor(y), Math.floor(z))); const l = []; let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
   for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
     const d = Math.hypot(dx, dy, dz); if (d > r) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz, b = getB(bx, by_, bz);
     if (!b || b === B.BEDROCK || b === B.WATER || Math.random() > 1.15 - d / r * .7) continue;
+    if (centerWet || wetTouch(bx, by_, bz)) continue;   // 水に触れているブロック/水中の爆発では壊れない
     if (applyBlock(bx, by_, bz, 0, true)) { l.push([bx, by_, bz, 0]); markAround(bx, bz); x0 = Math.min(x0, bx); x1 = Math.max(x1, bx); z0 = Math.min(z0, bz); z1 = Math.max(z1, bz); }
   }
   if (l.length) relight(x0 - 16, z0 - 16, x1 + 16, z1 + 16, true);
@@ -3192,10 +3259,10 @@ function updateBoats(dt) {
 }
 // ---------- RPG-7 ロケット ----------
 const rockets = [];
-function launchRocket(o, dir, mz) {
+function launchRocket(o, dir, mz, noPV) {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .5, 8), new THREE.MeshLambertMaterial({ color: 0x4a5a3a })), tip = new THREE.Mesh(new THREE.ConeGeometry(.08, .2, 8), new THREE.MeshLambertMaterial({ color: 0xb0382a }));
   tip.position.y = .35; mesh.add(tip); scene.add(mesh);
-  rockets.push({ x: mz.x, y: mz.y, z: mz.z, vx: dir.x * 55 + P.vx, vy: dir.y * 55, vz: dir.z * 55 + P.vz, t: 0, mesh });
+  rockets.push({ x: mz.x, y: mz.y, z: mz.z, vx: dir.x * 55 + (noPV ? 0 : P.vx), vy: dir.y * 55, vz: dir.z * 55 + (noPV ? 0 : P.vz), t: 0, mesh });
 }
 function updateRockets(dt) {
   for (let i = rockets.length - 1; i >= 0; i--) {
@@ -3213,8 +3280,11 @@ function updateRockets(dt) {
 const tnts = [];
 function primeTnt(x, y, z, fuse, vx, vy, vz) {
   if (getB(x, y, z) === B.TNT) { applyBlock(x, y, z, 0); netSend({ t: 'block', x, y, z, b: 0 }); }
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(.98, .98, .98), new THREE.MeshLambertMaterial({ color: 0xc02a22 })); mesh.position.set(x + .5, y + .5, z + .5); scene.add(mesh);
-  tnts.push({ x: x + .5, y: y + .5, z: z + .5, vx: vx || 0, vy: vy || 0, vz: vz || 0, t: fuse, mesh });
+  spawnTntEntity(x + .5, y + .5, z + .5, fuse, vx, vy, vz);
+}
+function spawnTntEntity(px, py, pz, fuse, vx, vy, vz) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(.98, .98, .98), new THREE.MeshLambertMaterial({ color: 0xc02a22 })); mesh.position.set(px, py, pz); scene.add(mesh);
+  tnts.push({ x: px, y: py, z: pz, vx: vx || 0, vy: vy || 0, vz: vz || 0, t: fuse, mesh });
 }
 const tntSolid = (x, y, z) => solidAt(Math.floor(x), Math.floor(y), Math.floor(z));
 // レッドストーンで点火するときの導火線: レバー/トーチに直付け、または『導線(粉)がTNTの真上/真下』=1秒(推進薬向け)、『導線が横』またはボタン=4秒(砲弾向け)
@@ -3405,6 +3475,7 @@ function hostHandle0(from, m) {
     case 'pos': applyRemote(from, m.p); break;
     case 'block': { const old = getB(m.x, m.y, m.z); applyBlock(m.x, m.y, m.z, m.b); if (!m.b && old) { blockDebris(m.x, m.y, m.z, old); } relay(from, m); break; }
     case 'shot': relay(from, m); shotFx(m); break;
+    case 'dimReq': enterDim(m.to); break;
     case 'hitMob': damageMob(m.id, m.dmg, from, m.head, { x: m.from[0], z: m.from[1] }); break;
     case 'hitPlayer': if (m.to === net.id) hurt(m.dmg, m.src, m.by); else { const c = net.conns.get(m.to); c && c.open && c.send({ t: 'dmg', dmg: m.dmg, src: m.src, by: m.by }); } break;
     case 'ent': if (m.d) ents.set(m.i, m.d); else ents.delete(m.i); relay(from, m); panelSig = ''; break;
@@ -3418,7 +3489,7 @@ function netErr(e, w) { console.error(w, e); if (performance.now() - netErrT > 5
 function guestHandle(m) { try { guestHandle0(m); } catch (e) { netErr(e, m && m.t); } }
 function guestHandle0(m) {
   switch (m.t) {
-    case 'welcome': net.gotWelcome = true; if (m.W !== W || m.D !== D) { alert('ホストの版(マップサイズ ' + (m.W || 256) + ')と違うため参加できません。ホストも最新版のファイルにしてください。'); setStatus('版が違います'); break; } beginGame({ seed: m.seed, edits: m.edits, time: m.time, ents: m.ents, rain: m.rain }); break;
+    case 'welcome': net.gotWelcome = true; if (m.W !== W || m.D !== D) { alert('ホストの版(マップサイズ ' + (m.W || 256) + ')と違うため参加できません。ホストも最新版のファイルにしてください。'); setStatus('版が違います'); break; } beginGame({ seed: m.seed, edits: (m.dim && m.dim !== 'ow' && m.owEdits) ? m.owEdits : m.edits, time: m.time, ents: m.ents, rain: m.rain }).then(() => { if (m.dim && m.dim !== 'ow') { enterDim(m.dim, true); for (let i = 0; i < m.edits.length; i += 2) { blocks[m.edits[i]] = m.edits[i + 1]; edits.set(m.edits[i], m.edits[i + 1]); } fullRelight(); resetChunks(); streamChunks(true); processDirty(999); } }); break;
     case 'state': {
       worldTime = m.time; rainTarget = m.r || 0; for (const id in m.p) if (id !== net.id) applyRemote(id, m.p[id]);
       for (const id of [...players.keys()]) if (!(id in m.p)) removePlayer(id);
@@ -3432,6 +3503,7 @@ function guestHandle0(m) {
     }
     case 'block': { const old = getB(m.x, m.y, m.z); applyBlock(m.x, m.y, m.z, m.b); if (!m.b && old) blockDebris(m.x, m.y, m.z, old); break; }
     case 'shot': shotFx(m); break;
+    case 'dim': enterDim(m.to, true); break;
     case 'dmg': hurt(m.dmg, m.src, m.by); break;
     case 'loot': giveLoot(net.id, m.l, m.p); break;
     case 'xp': addXp(m.n); break;
@@ -3445,15 +3517,142 @@ function guestHandle0(m) {
 }
 const setStatus = s => { $('status').textContent = s; };
 function makeCode() { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < 5; i++) s += a[Math.random() * a.length | 0]; return s; }
+// ============================================================
+//  Firebase: ログイン(ID・表示名・パスワード) / 安定サーバー(Realtime Databaseで中継) / クラウドセーブ
+//  ★ Firebaseコンソールの「プロジェクトの設定 → マイアプリ(ウェブ)」にある firebaseConfig をここへ貼る。
+//    空のままなら従来のP2P(PeerJS)で動きます。
+// ============================================================
+const FIREBASE_CONFIG = { apiKey: '', authDomain: '', databaseURL: '', projectId: '', appId: '' };
+const FBCFG = (() => { try { const j = JSON.parse(localStorage.getItem('nc9-fbcfg') || 'null'); if (j && j.apiKey) return j; } catch (e) { } return FIREBASE_CONFIG; })();   // メニューの「⚙ Firebase設定」で貼った設定(この端末に保存)が優先
+const fbEnabled = !!(FBCFG.apiKey && FBCFG.databaseURL && typeof firebase !== 'undefined');
+let fbAuth = null, fbDb = null; const acct = { user: null, id: '', name: '' }; const acStat = t => { $('acStat').textContent = t; };
+if (fbEnabled) { try { firebase.initializeApp(FBCFG); fbAuth = firebase.auth(); fbDb = firebase.database(); } catch (e) { console.error(e); } }
+const acctMail = id => id + '@nc9.app';
+function fbErr(e) { const c = e && e.code || ''; return c === 'auth/operation-not-supported-in-this-environment' ? 'このページを https(GitHub Pagesなど)で開いてください。ファイルとして直接開くとログインできません' : c === 'auth/operation-not-allowed' ? 'Firebaseの Authentication で「メール/パスワード」を有効にしてください' : /invalid-api-key|api-key-not-valid/.test(c) ? 'apiKeyが正しくありません(⚙で設定を確認)' : c === 'auth/requires-recent-login' ? '一度ログアウトして、ログインし直してから実行してください' : c === 'auth/user-disabled' ? 'このアカウントは無効化されています' : /PERMISSION_DENIED|permission/i.test(c + (e && e.message)) ? 'データベースのルールで拒否されました(ルールを確認)' : c === 'auth/email-already-in-use' ? 'このIDは既に使われています' : /wrong-password|user-not-found|invalid-credential|invalid-login/.test(c) ? 'IDまたはパスワードが違います' : c === 'auth/weak-password' ? 'パスワードは6文字以上にしてください' : c === 'auth/network-request-failed' ? '通信エラー(ネットを確認)' : c === 'auth/too-many-requests' ? '試行が多すぎます。少し待ってください' : (e && e.message) || 'エラー'; }
+function acctUI() {
+  const on = !!acct.user;
+  $('acctInfo').textContent = !fbAuth ? (FBCFG.apiKey ? '⚠ Firebaseの設定を読み込めませんでした(⚙ → 接続テスト)' : 'オンライン: Firebase未設定(⚙で設定できます。未設定でも従来のP2Pで遊べます)') : on ? 'ログイン中: ' + acct.name + '(@' + acct.id + ')' : 'オンライン/クラウドセーブにはログインが必要です(ソロはログイン不要)';
+  $('acctForm').style.display = fbAuth && !on ? 'block' : 'none'; $('acOut').style.display = on ? 'inline-block' : 'none'; $('acManage').style.display = on ? 'inline-block' : 'none'; if (!on) $('acManagePanel').style.display = 'none';
+  if (on) { $('name').value = acct.name; $('name').disabled = true; } else $('name').disabled = false;
+}
+const b64 = buf => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return btoa(s); };
+async function gzStr(str) { if (typeof CompressionStream === 'undefined') return 'R' + btoa(unescape(encodeURIComponent(str))); const cs = new CompressionStream('gzip'), w = cs.writable.getWriter(); w.write(new TextEncoder().encode(str)); w.close(); return 'Z' + b64(await new Response(cs.readable).arrayBuffer()); }
+async function gunzStr(z) { if (z[0] === 'R') return decodeURIComponent(escape(atob(z.slice(1)))); const bin = atob(z.slice(1)), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const ds = new DecompressionStream('gzip'), w = ds.writable.getWriter(); w.write(u); w.close(); return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer()); }
+let cloudT = 0;
+async function cloudPush(json) { if (!fbDb || !acct.user || performance.now() - cloudT < 60000) return; cloudT = performance.now(); try { await fbDb.ref('saves/' + acct.user.uid).set({ t: Date.now(), z: await gzStr(json) }); } catch (e) { console.error(e); } }
+async function cloudLoad() {
+  if (!fbDb || !acct.user) return;
+  try {
+    const v = (await fbDb.ref('saves/' + acct.user.uid).once('value')).val(); if (!v || !v.z) return;
+    const local = loadSaveData(); if (local && (local.savedAt || 0) >= v.t) return;
+    const j = JSON.parse(await gunzStr(v.z)), st = { seed: j.seed, edits: j.edits, time: j.time, player: j.P, ents: j.ents, rain: j.rain };
+    $('btnCont').style.display = 'block'; $('btnCont').textContent = '続きから(クラウド)'; $('btnCont').onclick = () => { audInit(); grabName(); net.role = 'solo'; beginGame(st); };
+    $('btnContHost').style.display = 'block'; $('btnContHost').onclick = () => { audInit(); grabName(); hostRoom(0, st); };
+  } catch (e) { console.error(e); }
+}
+if (fbAuth) {
+  $('acReg').onclick = async () => {
+    const id = $('acId').value.trim().toLowerCase(), nm = $('acName').value.trim(), pw = $('acPw').value;
+    if (!/^[a-z0-9_]{3,16}$/.test(id)) return acStat('IDは半角英数字と_で3〜16文字'); if (!nm || nm.length > 12) return acStat('表示名は1〜12文字'); if (pw.length < 6) return acStat('パスワードは6文字以上');
+    try { acStat('登録中…'); const c = await fbAuth.createUserWithEmailAndPassword(acctMail(id), pw); await c.user.updateProfile({ displayName: nm }); await fbDb.ref('users/' + c.user.uid).set({ id, name: nm, t: Date.now() }); acct.user = c.user; acct.id = id; acct.name = nm; acStat('登録しました'); acctUI(); cloudLoad(); } catch (e) { acStat(fbErr(e)); }
+  };
+  $('acLogin').onclick = async () => {
+    const id = $('acId').value.trim().toLowerCase(), pw = $('acPw').value; if (!id || !pw) return acStat('IDとパスワードを入力');
+    try { acStat('ログイン中…'); const c = await fbAuth.signInWithEmailAndPassword(acctMail(id), pw); acct.user = c.user; acct.id = id; acct.name = c.user.displayName || id; acStat(''); acctUI(); cloudLoad(); } catch (e) { acStat(fbErr(e)); }
+  };
+  $('acOut').onclick = async () => { await fbAuth.signOut(); acct.user = null; acct.id = ''; acctUI(); };
+  fbAuth.onAuthStateChanged(u => { if (u && !acct.user) { acct.user = u; acct.name = u.displayName || 'player'; acct.id = (u.email || '').split('@')[0]; acctUI(); cloudLoad(); } });
+}
+// ---- 設定の貼り付け・接続テスト・アカウント管理 ----
+function parseFbCfg(t) {
+  const a = t.indexOf('{'), b = t.lastIndexOf('}'); if (a < 0 || b < a) return null;
+  const s = t.slice(a, b + 1).replace(/\/\/.*$/gm, '').replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g, '$1"$2":').replace(/,\s*}/g, '}');
+  try { return JSON.parse(s); } catch (e) { return null; }
+}
+async function fbTest(out) {
+  const L = t => { out.textContent += t + '\n'; }; out.textContent = '';
+  if (typeof firebase === 'undefined') return L('✖ Firebase SDKを読み込めません(ネット接続・広告ブロッカーを確認)');
+  if (!FBCFG.apiKey) return L('✖ 設定が保存されていません(貼り付けて「保存して再読み込み」)');
+  L('✔ SDK読み込みOK'); if (!fbAuth || !fbDb) return L('✖ 初期化に失敗(設定の内容を確認。databaseURLが必要です)');
+  L('✔ 初期化OK(プロジェクト: ' + (FBCFG.projectId || '?') + ')');
+  try { await fbAuth.signInWithEmailAndPassword('nc9-selftest@nc9.app', 'selftest-pass-1'); L('✔ Auth OK'); }
+  catch (e) { const c = e.code || ''; if (/user-not-found|invalid-credential|invalid-login|wrong-password/.test(c)) L('✔ Auth: メール/パスワード認証が有効です'); else if (c === 'auth/operation-not-allowed') L('✖ Auth: 「メール/パスワード」が無効 → Authentication > Sign-in method で有効に'); else if (/api-key/.test(c)) L('✖ apiKeyが正しくありません'); else if (c === 'auth/network-request-failed') L('✖ 通信できません'); else L('△ Auth: ' + (c || e.message)); }
+  const ok = await new Promise(res => { const r = fbDb.ref('.info/connected'), h = sn => { if (sn.val()) { r.off('value', h); res(true); } }; r.on('value', h); setTimeout(() => { r.off('value', h); res(false); }, 7000); });
+  L(ok ? '✔ Realtime Database に接続OK' : '✖ Realtime Database に接続できません → databaseURL(地域つきURL)・データベース作成済みか確認');
+  if (!acct.user) return L('△ ルールの書き込みテストは、ログイン後にもう一度「接続テスト」を押してください');
+  try { const r = fbDb.ref('rooms/_selftest'); await r.set({ t: Date.now() }); await r.remove(); L('✔ ルールOK(rooms の読み書き)'); } catch (e) { L('✖ ルール: rooms への書き込みが拒否されました → ルールを貼り直して「公開」'); }
+}
+$('fbCfgBtn').onclick = () => { const p = $('fbCfgPanel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; if (p.style.display === 'block' && FBCFG.apiKey && !$('fbCfgText').value) $('fbCfgText').value = JSON.stringify(FBCFG, null, 2); };
+$('fbCfgSave').onclick = () => {
+  const c = parseFbCfg($('fbCfgText').value); if (!c || !c.apiKey) return void ($('fbTestOut').textContent = '✖ 読み取れません。firebaseConfig の { } の部分をそのまま貼ってください');
+  if (!c.databaseURL && c.projectId) { c.databaseURL = 'https://' + c.projectId + '-default-rtdb.firebaseio.com'; $('fbTestOut').textContent = '△ databaseURL が無かったので既定の米国URLを補いました。データベースを別の地域に作った場合は、そのURLを書き足してください\n'; }
+  if (!c.databaseURL) return void ($('fbTestOut').textContent = '✖ databaseURL(または projectId)が必要です。Realtime Database を作成してから設定を取り直してください');
+  try { localStorage.setItem('nc9-fbcfg', JSON.stringify(c)); } catch (e) { return void ($('fbTestOut').textContent = '✖ この端末に保存できませんでした'); }
+  $('fbTestOut').textContent += '✔ 保存しました。再読み込みします…'; setTimeout(() => location.reload(), 600);
+};
+$('fbCfgClear').onclick = () => { try { localStorage.removeItem('nc9-fbcfg'); } catch (e) { } location.reload(); };
+$('fbCfgTest').onclick = () => fbTest($('fbTestOut'));
+$('acManage').onclick = () => { const p = $('acManagePanel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; };
+if (fbAuth) {
+  $('acChName').onclick = async () => { const nm = $('acNewName').value.trim(); if (!acct.user || !nm || nm.length > 12) return acStat('表示名は1〜12文字'); try { await acct.user.updateProfile({ displayName: nm }); await fbDb.ref('users/' + acct.user.uid + '/name').set(nm); acct.name = nm; acStat('表示名を変更しました'); acctUI(); } catch (e) { acStat(fbErr(e)); } };
+  $('acChPw').onclick = async () => { const o = $('acOldPw').value, n = $('acNewPw').value; if (!acct.user) return; if (n.length < 6) return acStat('新しいパスワードは6文字以上'); try { await acct.user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(acct.user.email, o)); await acct.user.updatePassword(n); acStat('パスワードを変更しました'); $('acOldPw').value = $('acNewPw').value = ''; } catch (e) { acStat(fbErr(e)); } };
+  $('acDel').onclick = async () => { const o = $('acOldPw').value; if (!acct.user) return; if (!o) return acStat('「現在のパスワード」を入力してください'); if (!confirm('アカウントとクラウドセーブを完全に削除します。よろしいですか?')) return; try { const u = acct.user; await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, o)); await fbDb.ref('saves/' + u.uid).remove(); await fbDb.ref('users/' + u.uid).remove(); await u.delete(); acct.user = null; acct.id = ''; acStat('アカウントを削除しました'); acctUI(); } catch (e) { acStat(fbErr(e)); } };
+}
+acctUI();
+// ---- Realtime Database を使った通信(PeerJSと同じ形で使える)。部屋: rooms/<code>/{meta,join,up,down} ----
+class FBConn {
+  constructor(id) { this.peer = id; this.open = false; this.h = {}; this.buf = []; this.out = null; }
+  on(e, f) { (this.h[e] = this.h[e] || []).push(f); return this; }
+  emit(e, a) { for (const f of this.h[e] || []) { try { f(a); } catch (er) { console.error(er); } } }
+  send(m) { if (this.open) this.buf.push(JSON.stringify(m)); }
+  flush() { if (this.buf.length && this.out) { const s = '[' + this.buf.join(',') + ']'; this.buf = []; this.out.push({ b: s }); } }
+  recv(snap) { const v = snap.val(); snap.ref.remove(); if (!v || !v.b) return; let a; try { a = JSON.parse(v.b); } catch (e) { return; } for (const m of a) this.emit('data', m); }
+  close() { if (!this.open) return; this.open = false; this.emit('close'); }
+}
+class FBPeer {
+  constructor(role, code) {
+    this.role = role; this.code = code; this.h = {}; this.conns = new Map(); this.base = fbDb.ref('rooms/' + code);
+    if (role === 'host') {
+      this.id = 'nc9-' + code;
+      this.base.child('meta').transaction(cur => cur ? undefined : { host: acct.user.uid, name: net.name, t: Date.now() }, (err, ok) => {
+        if (err) return void setTimeout(() => this.emit('error', { type: 'DBエラー(' + (err.code || err.message) + ') ルール/databaseURLを確認' }), 0);
+        if (!ok) return void setTimeout(() => this.emit('error', { type: 'unavailable-id' }), 0);
+        this.base.onDisconnect().remove(); setTimeout(() => this.emit('open', this.id), 0); this.listenHost();
+      });
+    } else { this.id = acct.user.uid.slice(0, 8) + '-' + Math.random().toString(36).slice(2, 7); setTimeout(() => this.emit('open', this.id), 0); }
+    this.tm = setInterval(() => this.conns.forEach(c => c.flush()), 90);
+  }
+  on(e, f) { (this.h[e] = this.h[e] || []).push(f); return this; }
+  emit(e, a) { for (const f of this.h[e] || []) { try { f(a); } catch (er) { console.error(er); } } }
+  listenHost() {
+    this.base.child('join').on('child_added', s => {
+      const gid = s.key; if (this.conns.has(gid)) return; const c = new FBConn(gid); c.out = this.base.child('down/' + gid); this.conns.set(gid, c);
+      this.base.child('up/' + gid).on('child_added', sn => c.recv(sn)); this.emit('connection', c); c.open = true; c.emit('open');
+    });
+    this.base.child('join').on('child_removed', s => { const c = this.conns.get(s.key); if (!c) return; this.conns.delete(s.key); c.close(); this.base.child('up/' + s.key).off(); this.base.child('up/' + s.key).remove(); this.base.child('down/' + s.key).remove(); });
+  }
+  connect() {
+    const c = new FBConn('nc9-' + this.code); this.conns.set('host', c);
+    this.base.child('meta').once('value', s => {
+      if (!s.exists()) return this.emit('error', { type: 'peer-unavailable' });
+      const me = this.base.child('join/' + this.id); me.set({ name: net.name, t: Date.now() }); me.onDisconnect().remove();
+      c.out = this.base.child('up/' + this.id); this.base.child('down/' + this.id).on('child_added', sn => c.recv(sn));
+      this.base.child('meta').on('value', ms => { if (!ms.exists()) c.close(); });
+      c.open = true; c.emit('open');
+    });
+    return c;
+  }
+  destroy() { clearInterval(this.tm); if (this.role === 'host') this.base.remove(); else this.base.child('join/' + this.id).remove(); }
+}
 function hostRoom(tries = 0, saved) {
-  if (typeof Peer === 'undefined') return setStatus('通信ライブラリを読み込めませんでした(オフライン?)。ソロは遊べます。');
+  const useFB = fbEnabled && fbDb && acct.user; if (!useFB && typeof Peer === 'undefined') return setStatus('通信ライブラリを読み込めませんでした(オフライン?)。ソロは遊べます。');
   net.code = makeCode(); setStatus('部屋を作成中…');
-  const peer = new Peer('nc9-' + net.code);
+  const peer = useFB ? new FBPeer('host', net.code) : new Peer('nc9-' + net.code);
   peer.on('open', id => { net.peer = peer; net.role = 'host'; net.id = id; beginGame(saved || { seed: seedFromInput(), edits: [], time: worldTime }).then(() => feedMsg('部屋コード: ' + net.code + ' (友達に教えよう)', 'good')); });
   peer.on('error', e => { if (e.type === 'unavailable-id' && tries < 5) hostRoom(tries + 1, saved); else if (!started) setStatus('エラー: ' + e.type); });
   peer.on('connection', conn => {
     conn.on('open', () => {
-      const sendWelcome = () => { net.conns.set(conn.peer, conn); const ed = []; for (const [i, b] of edits) ed.push(i, b); conn.send({ t: 'welcome', seed, edits: ed, time: worldTime, ents: [...ents], rain: rainTarget, W, D }); };
+      const sendWelcome = () => { net.conns.set(conn.peer, conn); const ed = []; for (const [i, b] of edits) ed.push(i, b); let owEd = null; if (dim !== 'ow' && owSave) { owEd = []; for (const [i, b] of owSave.edits) owEd.push(i, b); } conn.send({ t: 'welcome', seed, edits: ed, time: worldTime, ents: [...ents], rain: rainTarget, W, D, dim, owEdits: owEd }); };
       if (started) sendWelcome(); else { const iv = setInterval(() => { if (started) { clearInterval(iv); sendWelcome(); } }, 300); }   // ホストの地形生成が終わってから送る
     });
     conn.on('data', m => hostHandle(conn.peer, m));
@@ -3461,9 +3660,9 @@ function hostRoom(tries = 0, saved) {
   });
 }
 function joinRoom(code) {
-  if (typeof Peer === 'undefined') return setStatus('通信ライブラリを読み込めませんでした(オフライン?)');
+  const useFB = fbEnabled && fbDb && acct.user; if (!useFB && typeof Peer === 'undefined') return setStatus('通信ライブラリを読み込めませんでした(オフライン?)');
   code = code.trim().toLowerCase().replace(/^#/, ''); if (!code) return setStatus('部屋コードを入力してください');
-  net.code = code; setStatus('接続中…'); const peer = new Peer(); net.peer = peer;
+  net.code = code; setStatus('接続中…'); const peer = useFB ? new FBPeer('guest', code) : new Peer(); net.peer = peer;
   const to = setTimeout(() => { if (!started && !net.gotWelcome) setStatus('接続できませんでした(コードを確認してください)'); }, 15000);
   peer.on('open', id => {
     net.id = id; net.role = 'guest'; const conn = peer.connect('nc9-' + code, { reliable: true }); net.hostConn = conn;
@@ -3609,11 +3808,11 @@ function drawMinimap() {
 // ================= セーブ =================
 const SAVEKEY = 'nc-save-v1';
 function saveGame() {
-  if (!started || net.role === 'guest') return;
+  if (!started || net.role === 'guest' || dim !== 'ow') return;
   try {
     const ed = []; for (const [i, b] of edits) ed.push(i, b);
-    localStorage.setItem(SAVEKEY, JSON.stringify({ seed, edits: ed, time: worldTime, name: net.name, ents: [...ents], rain: rainTarget,
-      P: { x: P.x, y: P.y, z: P.z, hp: P.hp, hunger: P.hunger, sat: P.sat, xp: P.xp, lvl: P.lvl, inv: P.inv, has: P.has, mag: P.mag, tools: P.tools, dur: P.dur, armor: P.armor, slots: P.slots, slot: P.slot, spawn: P.spawn, ench: P.ench } }));
+    const js = JSON.stringify({ savedAt: Date.now(), seed, edits: ed, time: worldTime, name: net.name, ents: [...ents], rain: rainTarget,
+      P: { x: P.x, y: P.y, z: P.z, hp: P.hp, hunger: P.hunger, sat: P.sat, xp: P.xp, lvl: P.lvl, inv: P.inv, has: P.has, mag: P.mag, tools: P.tools, dur: P.dur, armor: P.armor, slots: P.slots, slot: P.slot, spawn: P.spawn, ench: P.ench } }); localStorage.setItem(SAVEKEY, js); cloudPush(js);
   } catch (e) { }
 }
 function loadSaveData() { try { return JSON.parse(localStorage.getItem(SAVEKEY)); } catch (e) { return null; } }
@@ -3661,8 +3860,8 @@ try { $('gmode').value = localStorage.getItem('nc-gmode') || 's'; } catch (e) { 
 const grabName = () => { P.creative = $('gmode').value === 'c'; P.fly = false; try { localStorage.setItem('nc-gmode', $('gmode').value); } catch (e) { } net.name = ($('name').value.trim() || 'Player').slice(0, 12); try { localStorage.setItem('nc-name', net.name); } catch (e) { } };
 $('name').value = (() => { try { return localStorage.getItem('nc-name'); } catch (e) { return ''; } })() || 'Player' + ((Math.random() * 90 + 10) | 0);
 $('btnSolo').onclick = () => { audInit(); grabName(); net.role = 'solo'; beginGame({ seed: seedFromInput(), edits: [], time: worldTime }); };
-$('btnHost').onclick = () => { audInit(); grabName(); hostRoom(); };
-$('btnJoin').onclick = () => { audInit(); grabName(); joinRoom($('code').value); };
+$('btnHost').onclick = () => { if (fbAuth && !acct.user) return setStatus('先にログインしてください'); audInit(); grabName(); hostRoom(); };
+$('btnJoin').onclick = () => { if (fbAuth && !acct.user) return setStatus('先にログインしてください'); audInit(); grabName(); joinRoom($('code').value); };
 const sv = loadSaveData();
 if (sv) { $('btnCont').style.display = 'block'; $('btnCont').onclick = () => { audInit(); grabName(); net.role = 'solo'; beginGame({ seed: sv.seed, edits: sv.edits, time: sv.time, player: sv.P, ents: sv.ents, rain: sv.rain }); }; $('btnContHost').style.display = 'block'; $('btnContHost').onclick = () => { audInit(); grabName(); hostRoom(0, { seed: sv.seed, edits: sv.edits, time: sv.time, player: sv.P, ents: sv.ents, rain: sv.rain }); }; }
 $('btnQuit').onclick = () => { saveGame(); location.reload(); };
