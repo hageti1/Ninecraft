@@ -7,12 +7,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05080d">
- <title>NineCraft（ナインクラフト）- ブラウザで遊べるマイクラ風銃MODサバイバル</title>
+<title>NineCraft - 無料ブラウザ3Dマイクラ風＆銃サバイバルゲーム</title>
  <meta name="google-site-verification" content="bhUm9kEA3j2VBjIUEF5PgTB5qouVX6xt23dwUx7vIvY" />
-<meta name="description" content="ブラウザで今すぐ遊べるマイクラ風銃MODゲーム『NineCraft（ナインクラフト / ナイクラ）』。インストール不要・部屋コードでマルチプレイ対応の無料3Dサバイバル！">
+<meta name="description" content="インストール不要・スマホやiPadでも遊べるマイクラ風3Dクラフト＆銃サバイバルゲーム「NineCraft」。友達と部屋コードでマルチプレイもできる無料Webゲーム！">
 <meta property="og:title" content="NineCraft - 無料ブラウザ3Dクラフト＆銃サバイバル">
 <meta property="og:description" content="URLを開くだけで即プレイ！マイクラ風サバイバル＋銃MOD。友達とマルチプレイ対応。">
-<meta property="og:url" content="https://github.io">
+<meta property="og:url" content="https://hageti1.github.io/Ninecraft/">
 <meta name="twitter:card" content="summary">
 <style>
 :root{--ui:#e9f1f7;--dim:rgba(12,18,26,.62);--line:rgba(255,255,255,.14);--acc:#5fd38d;--bad:#ff5a4d;--font:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif}
@@ -498,9 +498,9 @@ function mkRecipes() {
   sh('リピーター', ['RRR', 'CCC'], { give: { repeater: 1 } }, 'item:repeater');
   sh('ディスペンサー', ['CCC', 'CIC', 'CRC'], { give: { dispenser: 1 } }, 'item:dispenser');
   ls('★キャノン設置・直射(TNT4)', ['tnt', 'tnt', 'tnt', 'tnt'], { build: 'direct', give: {} }, 'item:tnt');
-  ls('★キャノン設置・迫撃A近(TNT2)', ['tnt', 'tnt'], { build: 'mortar1', give: {} }, 'item:tnt');
-  ls('★キャノン設置・迫撃B中(TNT3)', ['tnt', 'tnt', 'tnt'], { build: 'mortar2', give: {} }, 'item:tnt');
-  ls('★キャノン設置・重砲3連(TNT6)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'heavy', give: {} }, 'item:tnt');
+  ls('★キャノン設置・迫撃砲(TNT3)', ['tnt', 'tnt', 'tnt'], { build: 'mortar1', give: {} }, 'item:tnt');
+  ls('★キャノン設置・空中炸裂弾(TNT5)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'mortar2', give: {} }, 'item:tnt');
+  ls('★キャノン設置・重砲3連(TNT5)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'heavy', give: {} }, 'item:tnt');
   ls('ロケット弾 ×3', ['cobble', 'coal', 'coal', 'coal'], { give: { rockets: 3 } }, 'item:rockets');
   sh('TNT ×2', ['KNK', 'NKN', 'KNK'], { give: { tnt: 2 } }, 'item:tnt');
   sh('自動採掘機', ['III', 'IRI', 'CPC'], { give: { miner: 1 } }, 'item:miner');
@@ -2370,7 +2370,7 @@ function tickRep(ch) {
 }
 function fireDispenser(x, y, z, b) {
   const i = bidx(x, y, z), e = ents.get(i); if (!e || !e.it) return; const [dx, dz] = DIR4[b - B.DISP0], px = x + dx + .5, py = y + .5, pz = z + dz + .5;
-  if (e.it.tnt > 0) { e.it.tnt--; spawnTntEntity(px, py, pz, 4, dx * 5, 2.5, dz * 5); }
+  if (e.it.tnt > 0) { e.it.tnt--; spawnTntEntity(px, py - .01, pz, 4); }
   else if (e.it.rockets > 0) { e.it.rockets--; launchRocket(null, { x: dx, y: .12, z: dz }, { x: px, y: py, z: pz }, true); }
   else { SND.click(.4); return; }
   netSend({ t: 'ent', i, d: e }); SND.click(.8);
@@ -2428,7 +2428,7 @@ function stepRedstone(dt) {
       else if (!on && b === B.PISTON0 + 1) { if (getB(x, y + 1, z) === 88) plan.push([x, y + 1, z, 0]); plan.push([x, y, z, B.PISTON0]); }
     } else if (isRep(b)) { const on = repIn(x, y, z, b); if (on !== repOn(b)) { if (!repTimers.has(i)) repTimers.set(i, { to: on, t: (ents.get(i) || {}).dl || 1 }); } else repTimers.delete(i); }
     else if (isDisp(b)) { const on = srcAdj(x, y, z, false); if (on && !dispOn.has(i)) { dispOn.add(i); fireDispenser(x, y, z, b); } else if (!on) dispOn.delete(i); }
-    else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, tntFuseAt(x, y, z)); }
+    else if (b === B.TNT) { if (srcAdj(x, y, z, false)) primeTnt(x, y, z, 4); }
     else if (b === 88 && (getB(x, y - 1, z) < 86 || getB(x, y - 1, z) > 87)) plan.push([x, y, z, 0]);
   }
   for (const [x, y, z, b] of plan) if (applyBlock(x, y, z, b, true)) ch.push([x, y, z, b]);
@@ -2476,7 +2476,7 @@ function updateRod(dt) {
 // ============================================================
 function useFlint() {
   const r = target(); if (!r) return;
-  if (r.b === B.TNT) { primeTnt(r.x, r.y, r.z, 3.2); SND.click(.8); return; }
+  if (r.b === B.TNT) { primeTnt(r.x, r.y, r.z, 4); SND.click(.8); return; }
   if (r.b === B.OBSIDIAN && tryPortal(r)) { SND.click(.8); return; }
   if (r.b === B.EFRAME) { feedMsg('エンダーアイを使おう'); return; }
   feedMsg('黒曜石の枠に使うとネザーゲートが開く');
@@ -2753,7 +2753,7 @@ function openChat() { chatOpen = true; (document.exitPointerLock && document.exi
 function closeChat() { chatOpen = false; $('chatIn').style.display = 'none'; $('chatIn').blur(); if (started && !P.dead && !craftOpen && !TOUCH) canvas.requestPointerLock(); showPause(); }
 $('chatIn').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else if (c[0] === '/cannon') { const kinds = ['direct', 'mortar1', 'mortar2', 'heavy'], need = { direct: 4, mortar1: 2, mortar2: 3, heavy: 6 }, kd = kinds.includes(c[1]) ? c[1] : null; if (!kd) feedMsg('/cannon direct | mortar1 | mortar2 | heavy', 'good'); else if (!P.creative && !(P.inv.tnt >= need[kd])) feedMsg('TNTが' + need[kd] + '個必要です', 'bad'); else { if (!P.creative) P.inv.tnt -= need[kd]; buildCannon(kd); updateHUD(); } } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル) /cannon direct'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
+  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else if (c[0] === '/cannon') { const kinds = ['direct', 'mortar1', 'mortar2', 'heavy'], need = { direct: 4, mortar1: 3, mortar2: 5, heavy: 5 }, kd = kinds.includes(c[1]) ? c[1] : null; if (!kd) feedMsg('/cannon direct | mortar1 | mortar2 | heavy', 'good'); else if (!P.creative && !(P.inv.tnt >= need[kd])) feedMsg('TNTが' + need[kd] + '個必要です', 'bad'); else { if (!P.creative) P.inv.tnt -= need[kd]; buildCannon(kd); updateHUD(); } } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル) /cannon direct'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
   else if (e.code === 'Escape') closeChat();
 });
 
@@ -3061,28 +3061,48 @@ function giveLoot(by, loot, p) {
 }
 function lightLevelAt(x, y, z) { return Math.max(skyAt(x, y, z) / 15 * env.sun, blkAt(x, y, z) / 15); }
 function hurtTarget(t, dmg, src, by) { if (t.id === net.id) hurt(dmg, src, by); else { const c = net.conns.get(t.id); c && c.open && c.send({ t: 'dmg', dmg, src, by }); } }
-const wetTouch = (x, y, z) => isWater(getB(x + 1, y, z)) || isWater(getB(x - 1, y, z)) || isWater(getB(x, y + 1, z)) || isWater(getB(x, y - 1, z)) || isWater(getB(x, y, z + 1)) || isWater(getB(x, y, z - 1));
-function explodeAt0(x, y, z, r, by) {
-  const centerWet = isWater(getB(Math.floor(x), Math.floor(y), Math.floor(z))); const l = []; let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
-  for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
-    const d = Math.hypot(dx, dy, dz); if (d > r) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz, b = getB(bx, by_, bz);
-    if (!b || b === B.BEDROCK || b === B.WATER || Math.random() > 1.15 - d / r * .7) continue;
-    if (centerWet || wetTouch(bx, by_, bz)) continue;   // 水に触れているブロック/水中の爆発では壊れない
+// ---- マイクラの爆発アルゴリズム: 16x16x16の殻から光線を飛ばし、爆発耐性(石6/木3/土0.55/黒曜石1200/水100/岩盤∞)で威力が減る。水の層を挟むと奥のブロックは守られる ----
+const BLASTRES = b => isFluid(b) ? 100 : b === B.BEDROCK ? 3.6e6 : b === B.OBSIDIAN ? 1200 : b === B.TNT ? 0 : !SOLIDB[b] ? 0 : TOOLOF[b] === 'pick' ? 6 : TOOLOF[b] === 'axe' ? 3 : TOOLOF[b] === 'shovel' ? .55 : .8;
+function rayClear(ax, ay, az, bx, by_, bz) { const dx = bx - ax, dy = by_ - ay, dz = bz - az, L = Math.hypot(dx, dy, dz), n = Math.ceil(L / .25); for (let i = 1; i < n; i++) { const t = i / n; if (solidAt(Math.floor(ax + dx * t), Math.floor(ay + dy * t), Math.floor(az + dz * t))) return false; } return true; }
+function exposureBox(cx, cy, cz, bx, by_, bz, w, h) {   // 当たり判定の箱の格子点から爆心が見える割合(マイクラと同じ)
+  const sx = 1 / (w * 2 + 1), sy = 1 / (h * 2 + 1), nx = Math.floor(1 / sx), ny = Math.floor(1 / sy), ox = (1 - nx * sx) / 2, oy = (1 - ny * sy) / 2; let hit = 0, tot = 0;
+  for (let i = 0; i <= nx; i++) for (let j = 0; j <= ny; j++) for (let k = 0; k <= nx; k++) { tot++; if (rayClear(cx, cy, cz, bx - w / 2 + w * (i * sx + ox), by_ + h * (j * sy + oy), bz - w / 2 + w * (k * sx + ox))) hit++; }
+  return tot ? hit / tot : 0;
+}
+function explodeAt(x, y, z, power, by) {
+  const r2 = power * 2;
+  // 1) 爆風を受ける存在(先に計算: このあと点火するTNTは吹き飛ばない)
+  for (const e of tnts) {
+    const dist = Math.hypot(e.x - x, e.y - .49 - y, e.z - z) / r2; if (dist > 1) continue;
+    const dx = e.x - x, dy = e.y - .34 - y, dz = e.z - z, l = Math.hypot(dx, dy, dz); if (l < 1e-4) continue;
+    const imp = (1 - dist) * exposureBox(x, y, z, e.x, e.y - .49, e.z, .98, .98); e.vx += dx / l * imp; e.vy += dy / l * imp; e.vz += dz / l * imp;
+  }
+  const hurtDmg = (px, py, pz, w, h) => { const dist = Math.hypot(px - x, py - y, pz - z) / r2; if (dist > 1) return 0; const imp = (1 - dist) * exposureBox(x, y, z, px, py, pz, w, h); return imp > 0 ? Math.floor((imp * imp + imp) / 2 * 7 * r2 + 1) : 0; };
+  for (const t of allTargets()) { const d = hurtDmg(t.x, t.y, t.z, .6, 1.8); if (d > 0) hurtTarget(t, d, { x, y, z }, by); }
+  for (const m of [...mobs.values()]) { const D_ = TYPEDEF[m.type], d = hurtDmg(m.x, m.y, m.z, Math.max(.4, D_.hw * 2), D_.h); if (d > 0) damageMob(m.id, d, null, false, { x, z }); }
+  // 2) ブロック破壊
+  const hit = new Map();
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) for (let k = 0; k < 16; k++) {
+    if (i !== 0 && i !== 15 && j !== 0 && j !== 15 && k !== 0 && k !== 15) continue;
+    let dx = i / 15 * 2 - 1, dy = j / 15 * 2 - 1, dz = k / 15 * 2 - 1; const dl = Math.hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
+    let f = power * (.7 + Math.random() * .6), px = x, py = y, pz = z;
+    for (; f > 0; f -= .22500001) {
+      const bx = Math.floor(px), by_ = Math.floor(py), bz = Math.floor(pz); if (bx < 0 || bx >= W || bz < 0 || bz >= D || by_ < 0 || by_ >= H) break;
+      const b = getB(bx, by_, bz); if (b) { f -= (BLASTRES(b) + .3) * .3; if (f > 0) hit.set(bx + ',' + by_ + ',' + bz, [bx, by_, bz, b]); }
+      px += dx * .3; py += dy * .3; pz += dz * .3;
+    }
+  }
+  const l = []; let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9, drops = 0;
+  for (const [bx, by_, bz, b] of hit.values()) {
+    if (b === B.BEDROCK || isFluid(b)) continue;
+    if (b === B.TNT) { primeTnt(bx, by_, bz, (10 + Math.floor(Math.random() * 20)) / 20); continue; }   // 誘爆: 10〜29tickの導火線
+    if (drops < 60 && Math.random() < 1 / power) { dropsFor(b, bx, by_, bz); drops++; }
     if (applyBlock(bx, by_, bz, 0, true)) { l.push([bx, by_, bz, 0]); markAround(bx, bz); x0 = Math.min(x0, bx); x1 = Math.max(x1, bx); z0 = Math.min(z0, bz); z1 = Math.max(z1, bz); }
   }
   if (l.length) relight(x0 - 16, z0 - 16, x1 + 16, z1 + 16, true);
   boomFx(x, y, z); netSend({ t: 'boom', x, y, z }); if (l.length) netSend({ t: 'blocks', l });
-  for (const t of allTargets()) { const d = Math.hypot(t.x - x, t.y + 1 - y, t.z - z); if (d < r * 2) hurtTarget(t, Math.round((1 - d / (r * 2)) * 24), { x, y, z }, by); }
-  for (const m of [...mobs.values()]) { const d = Math.hypot(m.x - x, m.y - y, m.z - z); if (d < r * 2 && m.type !== 'creeper') damageMob(m.id, (1 - d / (r * 2)) * 20, null, false, { x, z }); }
 }
-function explodeAt(x, y, z, r, by) {   // 爆風圏内のTNTは連鎖して着火する
-  const R2 = r + 1; for (let dx = -R2; dx <= R2; dx++) for (let dy = -R2; dy <= R2; dy++) for (let dz = -R2; dz <= R2; dz++) {
-    if (dx * dx + dy * dy + dz * dz > R2 * R2) continue; const bx = Math.floor(x) + dx, by_ = Math.floor(y) + dy, bz = Math.floor(z) + dz;
-    if (getB(bx, by_, bz) === B.TNT) primeTnt(bx, by_, bz, .25 + Math.random() * .6);
-  }
-  for (const e of tnts) { const dx = e.x - x, dy = e.y - y, dz = e.z - z, d = Math.hypot(dx, dy, dz); if (d < r * 2 && d > .01) { const k = 1 - d / (r * 2); if (k * 26 > 8) e.hot = true; e.vx += dx / d * k * 26; e.vy += dy / d * k * 26 + k * 4; e.vz += dz / d * k * 26; } }   // 爆風で点火済みTNTを飛ばす
-  explodeAt0(x, y, z, r, by);
-}
+const explodeAt0 = explodeAt;
 function boomFx(x, y, z) { burst(x, y, z, 50, [.9, .6, .2], 9, .22, .9, 6); burst(x, y, z, 40, [.3, .3, .3], 6, .3, 1.4, -1); SND.boom({ x, y, z }); P.shake = Math.max(P.shake, Math.max(0, 1 - Math.hypot(P.x - x, P.z - z) / 20) * .8); }
 function losClear(a, b) { const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, l = Math.hypot(dx, dy, dz) || 1, r = rayBlocks(a, { x: dx / l, y: dy / l, z: dz / l }, l, 1); return !r || r.t >= l - .5; }
 let dragonDown = false;
@@ -3286,56 +3306,68 @@ function updateRockets(dt) {
 const tnts = [];
 function primeTnt(x, y, z, fuse, vx, vy, vz) {
   if (getB(x, y, z) === B.TNT) { applyBlock(x, y, z, 0); netSend({ t: 'block', x, y, z, b: 0 }); }
-  spawnTntEntity(x + .5, y + .5, z + .5, fuse, vx, vy, vz);
+  spawnTntEntity(x + .5, y + .49, z + .5, fuse, vx, vy, vz);
 }
+// マイクラ同様: 導火線80tick(4秒)、点火直後に真上へ0.2blocks/tick(+ごく小さなランダム横速度)でポンと跳ねる
 function spawnTntEntity(px, py, pz, fuse, vx, vy, vz) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(.98, .98, .98), new THREE.MeshLambertMaterial({ color: 0xc02a22 })); mesh.position.set(px, py, pz); scene.add(mesh);
-  tnts.push({ x: px, y: py, z: pz, vx: vx || 0, vy: vy || 0, vz: vz || 0, t: fuse, mesh });
+  const a = Math.random() * Math.PI * 2;
+  tnts.push({ x: px, y: py, z: pz, vx: vx !== undefined ? vx : -Math.sin(a) * .02, vy: vy !== undefined ? vy : .2, vz: vz !== undefined ? vz : -Math.cos(a) * .02, t: Math.round(fuse * 20), mesh });   // 速度は blocks/tick、tは残りtick
 }
 const tntSolid = (x, y, z) => solidAt(Math.floor(x), Math.floor(y), Math.floor(z));
-// レッドストーンで点火するときの導火線: レバー/トーチに直付け、または『導線(粉)がTNTの真上/真下』=1秒(推進薬向け)、『導線が横』またはボタン=4秒(砲弾向け)
-function tntFuseAt(x, y, z) {
-  let f = 99;
-  for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]]) { const n = getB(x + dx, y + dy, z + dz); if (n === B.LEVER1 || n === B.RSTORCH1) f = Math.min(f, 1); else if (n === B.BUTTON1) f = Math.min(f, 4); else if (isDust(n) && n > 70) f = Math.min(f, dy ? 1 : 4); }
-  return f === 99 ? 4 : f;
-}
-// 点火したTNTは物理で動く: 重力・水流・ブロック衝突・爆風で吹き飛ぶ(→TNT砲)。爆風で高速になったTNT(砲弾)は、ぶつかった瞬間に爆発する(着発信管)
-function updateTnt(dt) {
-  for (let i = tnts.length - 1; i >= 0; i--) {
-    const e = tnts[i]; e.t -= dt;
-    const n = Math.min(14, Math.max(1, Math.ceil(Math.hypot(e.vx, e.vy, e.vz) * dt / .4))), h = dt / n;
-    for (let s = 0; s < n && e.t > 0; s++) {
-      if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z); e.vy += -2 * h - e.vy * 3 * h; e.vx *= 1 - 1.5 * h; e.vz *= 1 - 1.5 * h; if (fl) { e.vx += fl[0] * 10 * h; e.vz += fl[1] * 10 * h; e.vy += fl[2] * 5 * h; } }
-      else { e.vy -= 22 * h; e.vx *= 1 - .15 * h; e.vz *= 1 - .15 * h; }
-      let gnd = false;
-      const nx = e.x + e.vx * h; if (tntSolid(nx + Math.sign(e.vx) * .49, e.y, e.z)) { if (e.hot && Math.hypot(e.vx, e.vy, e.vz) > 10) e.t = 0; e.vx *= -.25; } else e.x = nx;
-      const nz = e.z + e.vz * h; if (tntSolid(e.x, e.y, nz + Math.sign(e.vz) * .49)) { if (e.hot && Math.hypot(e.vx, e.vy, e.vz) > 10) e.t = 0; e.vz *= -.25; } else e.z = nz;
-      const ny = e.y + e.vy * h; if (tntSolid(e.x, ny + (e.vy < 0 ? -.49 : .49), e.z)) { if (e.hot && Math.hypot(e.vx, e.vy, e.vz) > 10) e.t = 0; if (e.vy < 0) gnd = true; e.vy = e.vy < -6 ? -e.vy * .2 : 0; } else e.y = ny;
-      if (gnd) { e.vx *= 1 - 8 * h; e.vz *= 1 - 8 * h; }
+// 点火したTNTは20tick/秒で動く(マイクラ同様): 重力0.04・空気抵抗0.98・接地で横0.7倍/縦-0.5倍・水流に押される・爆風で吹き飛ぶ
+let tntAcc = 0;
+function updateTnt(dt) { tntAcc = Math.min(tntAcc + dt, .5); while (tntAcc >= .05) { tntAcc -= .05; tickTnt(); } }
+function tickTnt() {
+  for (const e of tnts.slice()) {   // 古いものから順に更新(爆発の連鎖順もマイクラ同様)
+    if (!tnts.includes(e)) continue;
+    e.vy -= .04;
+    if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z); if (fl) { e.vx += fl[0] * .014; e.vz += fl[1] * .014; e.vy += fl[2] * .014; } }
+    let gnd = false; const n = Math.max(1, Math.ceil(Math.hypot(e.vx, e.vy, e.vz) / .4));
+    for (let k = 0; k < n; k++) {
+      const ux = e.vx / n, uy = e.vy / n, uz = e.vz / n;
+      if (tntSolid(e.x + ux + Math.sign(ux) * .49, e.y, e.z)) e.vx = 0; else e.x += ux;
+      if (tntSolid(e.x, e.y, e.z + uz + Math.sign(uz) * .49)) e.vz = 0; else e.z += uz;
+      if (tntSolid(e.x, e.y + uy + (uy < 0 ? -.49 : .49), e.z)) { if (uy < 0) gnd = true; e.vy = 0; } else e.y += uy;
     }
-    e.mesh.position.set(e.x, e.y, e.z); e.mesh.material.emissive.setHex(Math.floor(e.t * 6) % 2 ? 0xffffff : 0x000000); e.mesh.scale.setScalar(1 + Math.max(0, .5 - e.t) * .25);
-    if (e.t <= 0 || e.y < 0) { scene.remove(e.mesh); tnts.splice(i, 1); explodeAt(e.x, e.y, e.z, 5, null); }
+    e.vx *= .98; e.vy *= .98; e.vz *= .98; if (gnd) { e.vx *= .7; e.vz *= .7; e.vy *= -.5; }
+    e.mesh.position.set(e.x, e.y, e.z); e.mesh.material.emissive.setHex(Math.floor(e.t / 5) % 2 ? 0xffffff : 0x000000); e.mesh.scale.setScalar(1 + Math.max(0, 10 - e.t) * .03);
+    if (--e.t <= 0 || e.y < -8) { scene.remove(e.mesh); const i = tnts.indexOf(e); if (i >= 0) tnts.splice(i, 1); if (e.t <= 0) explodeAt(e.x, e.y - .49 + .0625, e.z, 4, null); }
   }
 }
 // ---------- TNTキャノン設置キット(クラフトで目の前に組み上がる。レバーが自分の2マス前、砲はその12マス先。レバーを右クリックで発射) ----------
 function cannonCells(kind) {
-  const c = [], A = (x, y, z, t) => c.push([x, y, z, t]);
-  const hub = arms => { A(-2, 0, 0, 'F'); A(-2, 1, 0, 'D'); A(-3, 1, 0, 'D'); if (arms.includes('F')) { A(-1, 0, 0, 'A'); A(-1, 1, 0, 'D'); } if (arms.includes('L')) { A(-2, 0, 1, 'A'); A(-2, 1, 1, 'D'); } if (arms.includes('R')) { A(-2, 0, -1, 'A'); A(-2, 1, -1, 'D'); } };
-  const lead = () => { for (let x = -11; x <= -4; x++) A(x, 1, 0, 'D'); A(-12, 1, 0, 'L'); };
-  const feed = (sy, shells) => { A(-2, 1, -1, 'D'); for (let x = -1; x <= (sy === 1 ? 0 : -1); x++) A(x, 1, -1, 'D'); for (const sx of shells) { A(sx, sy, 0, 'S'); if (sy !== 1) A(sx, sy, -1, 'D'); } };
-  if (kind === 'direct') { hub('FLR'); feed(0, [0]); } else if (kind === 'mortar1') { hub('F'); feed(1, [0]); } else if (kind === 'mortar2') { hub('LR'); feed(1, [0]); } else { hub('FLR'); feed(0, [0, 1, 2]); }
-  lead(); return c;
+  // マイクラ式: 全TNTの導火線は80tick。推進薬は先に点火し、砲弾は『リピーターの遅延』で約3秒遅れて点火 → 推進薬の爆風で飛んだあと、遅れて爆発する
+  const c = [], A = (x, y, z, t, dir, dl) => c.push([x, y, z, t, dir, dl]), N = 3;
+  const arms = { F: [-1, 0, 0], L: [-2, 0, 1], R: [-2, 0, -1], l: [-1, 0, 1], r: [-1, 0, -1] };
+  const cfg = { direct: ['FLR', 0, [0]], mortar1: ['LR', 1, [0]], mortar2: ['LRlr', 1, [0]], heavy: ['LR', 1, [0, 1, 2]] }[kind] || ['LR', 1, [0]];
+  const sy = cfg[1], shells = cfg[2], multi = shells.length > 1;
+  A(-2, 0, 0, 'F'); A(-2, 1, 0, 'D'); A(-3, 1, 0, 'D');
+  for (const ch of cfg[0]) { const [x, y, z] = arms[ch]; A(x, y, z, 'A'); A(x, 1, z, 'D'); }
+  for (let x = -11; x <= -4; x++) { if (x === -7) A(x, 1, 0, 'R', 0, 1); else A(x, 1, 0, 'D'); }   // 途中のリピーターで信号を再生成
+  A(-12, 1, 0, 'L');
+  for (const sx of shells) A(sx, sy, 0, 'S');
+  const zin = -(N + 1) - (multi ? 1 : 0);
+  A(-2, 1, -1, 'D'); for (let z = -2; z >= zin; z--) A(-2, 1, z, 'D'); A(-1, 1, zin, 'D'); A(0, sy === 1 ? 1 : 0, zin, 'D');
+  for (let i = 0; i < N; i++) A(0, sy, zin + 1 + i, 'R', 2, 4);
+  if (multi) for (const sx of shells) A(sx, sy, -1, 'D');
+  const seen = new Set(), out = []; for (const q of c) { const k = q[0] + ',' + q[1] + ',' + q[2]; if (!seen.has(k)) { seen.add(k); out.push(q); } }
+  return out;
 }
 function buildCannon(kind) {
   const ax = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)), dx = ax ? -Math.sign(Math.sin(P.yaw)) : 0, dz = ax ? 0 : -Math.sign(Math.cos(P.yaw)), px = -dz, pz = dx;
   const ox = Math.floor(P.x) + dx * 14, oz = Math.floor(P.z) + dz * 14, oy = Math.floor(P.y + .01), cells = cannonCells(kind), ID = { S: B.TNT, A: B.TNT, L: B.LEVER0, D: 70, F: B.STONE };
-  const put = (x, y, z, b) => { const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (wx < 2 || wx >= W - 2 || wz < 2 || wz >= D - 2 || wy < 2 || wy >= H - 2) return; applyBlock(wx, wy, wz, b); netSend({ t: 'block', x: wx, y: wy, z: wz, b }); };
-  for (let x = -14; x <= 4; x++) for (let z = -3; z <= 3; z++) { put(x, -1, z, B.STONE); for (let y = 0; y <= 4; y++) put(x, y, z, 0); }   // 整地: 床を石にして上の空間を空ける
+  const inb = (wx, wy, wz) => wx >= 2 && wx < W - 2 && wz >= 2 && wz < D - 2 && wy >= 2 && wy < H - 2;
+  const put = (x, y, z, b) => { const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (!inb(wx, wy, wz)) return; applyBlock(wx, wy, wz, b); netSend({ t: 'block', x: wx, y: wy, z: wz, b }); };
+  const wdir = ld => { const v = ld === 0 ? [dx, dz] : [px, pz]; return DIR4.findIndex(q => q[0] === v[0] && q[1] === v[1]); };   // 設置向きに合わせてリピーターを回す
+  for (let x = -14; x <= 4; x++) for (let z = -9; z <= 4; z++) { put(x, -1, z, B.STONE); for (let y = 0; y <= 4; y++) put(x, y, z, 0); }   // 整地: 床を石にして上の空間を空ける
   const have = new Set(cells.map(q => q[0] + ',' + q[1] + ',' + q[2]));
   for (const [x, y, z] of cells) for (let yy = y - 1; yy >= 0; yy--) { if (!have.has(x + ',' + yy + ',' + z)) { have.add(x + ',' + yy + ',' + z); put(x, yy, z, B.STONE); } }   // 粉・レバーの土台
-  for (const [x, y, z, t] of cells) put(x, y, z, ID[t]);
-  const tx = ox + dx * -12 + px * 0, tz2 = oz + dz * -12;
-  feedMsg('キャノン設置完了! 手前のレバー(' + tx + ',' + (oy + 1) + ',' + tz2 + ')を右クリックで発射。爆風は半径約10マス、離れて!', 'good');
+  for (const [x, y, z, t, d, dl] of cells) {
+    if (t === 'R') { put(x, y, z, B.REP0 + wdir(d)); const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (inb(wx, wy, wz)) { const e = { k: 'rp', dl }, i = bidx(wx, wy, wz); ents.set(i, e); netSend({ t: 'ent', i, d: e }); } }
+    else put(x, y, z, ID[t]);
+  }
+  feedMsg('キャノン設置完了! 手前のレバーを右クリックで発射。砲弾は約3秒後に爆発します。爆風は半径約8マス、離れて!', 'good');
 }
 // ---------- 自動採掘機: 真下を5x5で上から順に掘り進む(近くにいる間だけ動く)。掘った物は機械の上に出る ----------
 const miners = new Map();
@@ -3528,7 +3560,16 @@ function makeCode() { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; f
 //  ★ Firebaseコンソールの「プロジェクトの設定 → マイアプリ(ウェブ)」にある firebaseConfig をここへ貼る。
 //    空のままなら従来のP2P(PeerJS)で動きます。
 // ============================================================
-const FIREBASE_CONFIG = { apiKey: '', authDomain: '', databaseURL: '', projectId: '', appId: '' };
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA7LsKHBGzspW7pEkSJALBHO7t1vDpLq5Q",
+  authDomain: "ninecraft-4f76c.firebaseapp.com",
+  databaseURL: "https://ninecraft-4f76c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ninecraft-4f76c",
+  storageBucket: "ninecraft-4f76c.firebasestorage.app",
+  messagingSenderId: "947851914131",
+  appId: "1:947851914131:web:d5db787be2280b5ecf9666",
+  measurementId: "G-4134SX65VL"
+};
 const FBCFG = (() => { try { const j = JSON.parse(localStorage.getItem('nc9-fbcfg') || 'null'); if (j && j.apiKey) return j; } catch (e) { } return FIREBASE_CONFIG; })();   // メニューの「⚙ Firebase設定」で貼った設定(この端末に保存)が優先
 const fbEnabled = !!(FBCFG.apiKey && FBCFG.databaseURL && typeof firebase !== 'undefined');
 let fbAuth = null, fbDb = null; const acct = { user: null, id: '', name: '' }; const acStat = t => { $('acStat').textContent = t; };
