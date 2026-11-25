@@ -12,7 +12,7 @@
 <meta name="description" content="インストール不要・スマホやiPadでも遊べるマイクラ風3Dクラフト＆銃サバイバルゲーム「NineCraft」。友達と部屋コードでマルチプレイもできる無料Webゲーム！">
 <meta property="og:title" content="NineCraft - 無料ブラウザ3Dクラフト＆銃サバイバル">
 <meta property="og:description" content="URLを開くだけで即プレイ！マイクラ風サバイバル＋銃MOD。友達とマルチプレイ対応。">
-<meta property="og:url" content="https://hageti1.github.io/Ninecraft/">
+<meta property="og:url" content="https://github.io">
 <meta name="twitter:card" content="summary">
 <style>
 :root{--ui:#e9f1f7;--dim:rgba(12,18,26,.62);--line:rgba(255,255,255,.14);--acc:#5fd38d;--bad:#ff5a4d;--font:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif}
@@ -500,6 +500,8 @@ function mkRecipes() {
   ls('★キャノン設置・直射(TNT4)', ['tnt', 'tnt', 'tnt', 'tnt'], { build: 'direct', give: {} }, 'item:tnt');
   ls('★キャノン設置・迫撃砲(TNT3)', ['tnt', 'tnt', 'tnt'], { build: 'mortar1', give: {} }, 'item:tnt');
   ls('★キャノン設置・空中炸裂弾(TNT5)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'mortar2', give: {} }, 'item:tnt');
+  ls('★水砲・迫撃(TNT8・連射可)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'wmortar', give: {} }, 'item:tnt');
+  ls('★水砲・重迫撃(TNT8・連射可)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'wmortar2', give: {} }, 'item:tnt');
   ls('★キャノン設置・重砲3連(TNT5)', ['tnt', 'tnt', 'tnt', 'tnt', 'tnt'], { build: 'heavy', give: {} }, 'item:tnt');
   ls('ロケット弾 ×3', ['cobble', 'coal', 'coal', 'coal'], { give: { rockets: 3 } }, 'item:rockets');
   sh('TNT ×2', ['KNK', 'NKN', 'KNK'], { give: { tnt: 2 } }, 'item:tnt');
@@ -1437,7 +1439,7 @@ const lavaAt = (x, y, z) => isLava(getB(Math.floor(x), Math.floor(y), Math.floor
 // 浮力: 体の3点(足/胸/頭)のうち水に浸かっている割合 0..1
 function subm(x, y, z, h) { return ((waterAt(x, y + h * .15, z) ? 1 : 0) + (waterAt(x, y + h * .5, z) ? 1 : 0) + (waterAt(x, y + h * .88, z) ? 1 : 0)) / 3; }
 // 水流: 水位の勾配(低い方=水源側から高い方=末端側へ)、縁から落ちる流れ、滝の落下。返り値 [vx, vz, vy] (大きさ最大1)
-function flowAt(x, y, z) {
+function flowAt(x, y, z, nd) {
   const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), b = getB(xi, yi, zi);
   if (!isWater(b)) return null;
   const lv = fluidLevel(b); let fx = 0, fz = 0, fy = 0;
@@ -1450,7 +1452,7 @@ function flowAt(x, y, z) {
   if (lv > 0 && (isWater(getB(xi, yi + 1, zi)) || fluidRepl(below))) fy = -1.5;
   const len = Math.hypot(fx, fz);
   if (len > .01) { const k = Math.min(1, len / 2) / len; fx *= k; fz *= k; }
-  else if (yi >= SEA - 6) { fx = Math.sin(xi * .06 + worldTime * .25) * .3; fz = Math.cos(zi * .05 + worldTime * .21) * .3; }   // 海のゆるい潮流
+  else if (!nd && yi >= SEA - 6) { fx = Math.sin(xi * .06 + worldTime * .25) * .3; fz = Math.cos(zi * .05 + worldTime * .21) * .3; }   // 海のゆるい潮流
   return [fx, fz, fy];
 }
 function lightAt(x, y, z) { const xi = Math.floor(x), yi = Math.floor(y + .5), zi = Math.floor(z); return [skyAt(xi, yi, zi) / 15, blkAt(xi, yi, zi) / 15]; }
@@ -2753,7 +2755,7 @@ function openChat() { chatOpen = true; (document.exitPointerLock && document.exi
 function closeChat() { chatOpen = false; $('chatIn').style.display = 'none'; $('chatIn').blur(); if (started && !P.dead && !craftOpen && !TOUCH) canvas.requestPointerLock(); showPause(); }
 $('chatIn').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else if (c[0] === '/cannon') { const kinds = ['direct', 'mortar1', 'mortar2', 'heavy'], need = { direct: 4, mortar1: 3, mortar2: 5, heavy: 5 }, kd = kinds.includes(c[1]) ? c[1] : null; if (!kd) feedMsg('/cannon direct | mortar1 | mortar2 | heavy', 'good'); else if (!P.creative && !(P.inv.tnt >= need[kd])) feedMsg('TNTが' + need[kd] + '個必要です', 'bad'); else { if (!P.creative) P.inv.tnt -= need[kd]; buildCannon(kd); updateHUD(); } } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル) /cannon direct'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
+  if (e.code === 'Enter') { const s = $('chatIn').value.trim(); if (s && s[0] === '/') { const c = s.toLowerCase().split(/\s+/); if (c[0] === '/gm' || c[0] === '/gamemode') { P.creative = /^(c|1|creative|クリエ)/.test(c[1] || ''); P.fly = false; feedMsg(P.creative ? 'クリエイティブモード' : 'サバイバルモード', 'good'); } else if (c[0] === '/cannon') { const kinds = ['direct', 'mortar1', 'mortar2', 'heavy', 'wmortar', 'wmortar2'], need = { direct: 4, mortar1: 3, mortar2: 5, heavy: 5, wmortar: 8, wmortar2: 8 }, kd = kinds.includes(c[1]) ? c[1] : null; if (!kd) feedMsg('/cannon direct | mortar1 | mortar2 | heavy', 'good'); else if (!P.creative && !(P.inv.tnt >= need[kd])) feedMsg('TNTが' + need[kd] + '個必要です', 'bad'); else { if (!P.creative) P.inv.tnt -= need[kd]; buildCannon(kd); updateHUD(); } } else feedMsg('コマンド: /gm c(クリエイティブ) /gm s(サバイバル) /cannon direct'); } else if (s) { const m = { t: 'chat', n: net.name, s: s.slice(0, 120) }; feedMsg(`${net.name}: ${m.s}`, 'chat'); netSend(m); } closeChat(); }
   else if (e.code === 'Escape') closeChat();
 });
 
@@ -3322,7 +3324,7 @@ function tickTnt() {
   for (const e of tnts.slice()) {   // 古いものから順に更新(爆発の連鎖順もマイクラ同様)
     if (!tnts.includes(e)) continue;
     e.vy -= .04;
-    if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z); if (fl) { e.vx += fl[0] * .014; e.vz += fl[1] * .014; e.vy += fl[2] * .014; } }
+    if (waterAt(e.x, e.y, e.z)) { const fl = flowAt(e.x, e.y, e.z, true); if (fl) { e.vx += fl[0] * .014; e.vz += fl[1] * .014; e.vy += fl[2] * .014; } }
     let gnd = false; const n = Math.max(1, Math.ceil(Math.hypot(e.vx, e.vy, e.vz) / .4));
     for (let k = 0; k < n; k++) {
       const ux = e.vx / n, uy = e.vy / n, uz = e.vz / n;
@@ -3340,6 +3342,7 @@ function cannonCells(kind) {
   // マイクラ式: 全TNTの導火線は80tick。推進薬は先に点火し、砲弾は『リピーターの遅延』で約3秒遅れて点火 → 推進薬の爆風で飛んだあと、遅れて爆発する
   const c = [], A = (x, y, z, t, dir, dl) => c.push([x, y, z, t, dir, dl]), N = 3;
   const arms = { F: [-1, 0, 0], L: [-2, 0, 1], R: [-2, 0, -1], l: [-1, 0, 1], r: [-1, 0, -1] };
+  if (kind === 'wmortar' || kind === 'wmortar2') return waterCannonCells(kind === 'wmortar2' ? 'LRlr' : 'LR');
   const cfg = { direct: ['FLR', 0, [0]], mortar1: ['LR', 1, [0]], mortar2: ['LRlr', 1, [0]], heavy: ['LR', 1, [0, 1, 2]] }[kind] || ['LR', 1, [0]];
   const sy = cfg[1], shells = cfg[2], multi = shells.length > 1;
   A(-2, 0, 0, 'F'); A(-2, 1, 0, 'D'); A(-3, 1, 0, 'D');
@@ -3354,20 +3357,44 @@ function cannonCells(kind) {
   const seen = new Set(), out = []; for (const q of c) { const k = q[0] + ',' + q[1] + ',' + q[2]; if (!seen.has(k)) { seen.add(k); out.push(q); } }
   return out;
 }
+// ★水砲(マイクラ式): 水で満たした小部屋にディスペンサーがTNTを落とす → 水中の爆発はブロックを壊さないので砲が壊れず、レバーを入れ直すたびに撃てる。
+//   推進薬ディスペンサーが先に撃ち、砲弾ディスペンサーはリピーター3つぶん(約2.5秒)遅れて撃つ。TNTはディスペンサーに入れて補充できる。
+function waterCannonCells(charges) {
+  const c = [], A = (x, y, z, t, dir, dl) => c.push([x, y, z, t, dir, dl]), N = 3;
+  const arms = { L: [-2, 1, 3], R: [-2, -1, 2], l: [-1, 1, 3], r: [-1, -1, 2] };   // [x, 水マスのz, ディスペンサーの向き(3:-z,2:+z)]
+  for (let x = -2; x <= 1; x++) for (let z = -1; z <= 1; z++) { if (x === 0) continue; A(x, 0, z, 'W'); }   // 水のプール(x=0の石柱の列を除く。左右対称にして横ブレを防ぐ)
+  A(0, 0, 0, 'F'); A(0, 0, -1, 'F'); A(0, 0, 1, 'F');
+  for (const ch of charges) { const [x, wz, dir] = arms[ch]; A(x, 0, wz * 2, 'P', dir, 0); A(x, 1, wz * 2, 'D'); }
+  for (let z = -2; z <= 2; z++) A(-3, 1, z, 'D');
+  for (let x = -11; x <= -4; x++) { if (x === -7) A(x, 1, 0, 'R', 0, 1); else A(x, 1, 0, 'D'); }
+  A(-12, 1, 0, 'L');
+  const zin = -(N + 2); for (let z = -3; z >= zin; z--) A(-3, 1, z, 'D'); for (let x = -2; x <= 0; x++) A(x, 1, zin, 'D');
+  for (let i = 0; i < N; i++) A(0, 1, zin + 1 + i, 'R', 2, 4);
+  A(0, 1, -1, 'P', 2, 0);   // 砲弾ディスペンサー(+z向き)。砲弾は石柱(0,0,0)の上のマス(0,1,0)に出る
+  const seen = new Set(), out = []; for (const q of c) { const k = q[0] + ',' + q[1] + ',' + q[2]; if (!seen.has(k)) { seen.add(k); out.push(q); } }
+  return out;
+}
 function buildCannon(kind) {
   const ax = Math.abs(Math.sin(P.yaw)) > Math.abs(Math.cos(P.yaw)), dx = ax ? -Math.sign(Math.sin(P.yaw)) : 0, dz = ax ? 0 : -Math.sign(Math.cos(P.yaw)), px = -dz, pz = dx;
-  const ox = Math.floor(P.x) + dx * 14, oz = Math.floor(P.z) + dz * 14, oy = Math.floor(P.y + .01), cells = cannonCells(kind), ID = { S: B.TNT, A: B.TNT, L: B.LEVER0, D: 70, F: B.STONE };
+  const ox = Math.floor(P.x) + dx * 14, oz = Math.floor(P.z) + dz * 14, oy = Math.floor(P.y + .01), cells = cannonCells(kind), ID = { S: B.TNT, A: B.TNT, L: B.LEVER0, D: 70, F: B.STONE, W: B.WATER };
   const inb = (wx, wy, wz) => wx >= 2 && wx < W - 2 && wz >= 2 && wz < D - 2 && wy >= 2 && wy < H - 2;
   const put = (x, y, z, b) => { const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (!inb(wx, wy, wz)) return; applyBlock(wx, wy, wz, b); netSend({ t: 'block', x: wx, y: wy, z: wz, b }); };
-  const wdir = ld => { const v = ld === 0 ? [dx, dz] : [px, pz]; return DIR4.findIndex(q => q[0] === v[0] && q[1] === v[1]); };   // 設置向きに合わせてリピーターを回す
+  const wdir = ld => { const v = ld === 0 ? [dx, dz] : ld === 1 ? [-dx, -dz] : ld === 2 ? [px, pz] : [-px, -pz]; return DIR4.findIndex(q => q[0] === v[0] && q[1] === v[1]); };   // 設置向きに合わせてリピーターを回す
   for (let x = -14; x <= 4; x++) for (let z = -9; z <= 4; z++) { put(x, -1, z, B.STONE); for (let y = 0; y <= 4; y++) put(x, y, z, 0); }   // 整地: 床を石にして上の空間を空ける
   const have = new Set(cells.map(q => q[0] + ',' + q[1] + ',' + q[2]));
   for (const [x, y, z] of cells) for (let yy = y - 1; yy >= 0; yy--) { if (!have.has(x + ',' + yy + ',' + z)) { have.add(x + ',' + yy + ',' + z); put(x, yy, z, B.STONE); } }   // 粉・レバーの土台
+  const wcells = cells.filter(q => q[3] === 'W'); let rounds = 0, left = 0;
+  if (wcells.length) {   // 水マスの周囲を石で囲う(水が流れ出さないように)
+    for (const [x, , z] of wcells) for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!have.has((x + ax) + ',0,' + (z + az))) { have.add((x + ax) + ',0,' + (z + az)); put(x + ax, 0, z + az, B.STONE); }
+    const nch = cells.filter(q => q[3] === 'P').length - 1; rounds = Math.max(1, Math.floor(8 / (nch + 1))); left = 8 - rounds * (nch + 1);
+  }
   for (const [x, y, z, t, d, dl] of cells) {
+    if (t === 'P') { put(x, y, z, B.DISP0 + wdir(d)); const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (inb(wx, wy, wz)) { const e = { k: 'c', it: { tnt: rounds } }, i = bidx(wx, wy, wz); ents.set(i, e); netSend({ t: 'ent', i, d: e }); } continue; }
     if (t === 'R') { put(x, y, z, B.REP0 + wdir(d)); const wx = ox + dx * x + px * z, wz = oz + dz * x + pz * z, wy = oy + y; if (inb(wx, wy, wz)) { const e = { k: 'rp', dl }, i = bidx(wx, wy, wz); ents.set(i, e); netSend({ t: 'ent', i, d: e }); } }
     else put(x, y, z, ID[t]);
   }
-  feedMsg('キャノン設置完了! 手前のレバーを右クリックで発射。砲弾は約3秒後に爆発します。爆風は半径約8マス、離れて!', 'good');
+  if (wcells.length) { if (!P.creative && left > 0) { P.inv.tnt += left; updateHUD(); } feedMsg('水砲を設置(TNT ' + rounds + '発ぶん装填)。レバーを入れて、撃つたびに切って入れ直します。ディスペンサーを右クリックでTNTを補充できます。水中の爆発では砲は壊れません', 'good'); }
+  else feedMsg('キャノン設置完了! 手前のレバーを右クリックで発射。砲弾は約3秒後に爆発します。爆風は半径約8マス、離れて!', 'good');
 }
 // ---------- 自動採掘機: 真下を5x5で上から順に掘り進む(近くにいる間だけ動く)。掘った物は機械の上に出る ----------
 const miners = new Map();
