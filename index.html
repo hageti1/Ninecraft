@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -2363,7 +2363,7 @@ function rsEnqueue(x, y, z) {
 }
 const dustLv = b => isDust(b) ? b - 70 : 0;
 const isRep = b => b >= B.REP0 && b <= B.REP0 + 7, isDisp = b => b >= B.DISP0 && b <= B.DISP0 + 3, repOn = b => b >= B.REP0 + 4, repDir = b => (b - B.REP0) & 3, DIR4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-const repTimers = new Map(), dispOn = new Set();
+const repTimers = new Map(), dispOn = new Set(), dispCd = new Map(); let rsNow = 0;
 // このセルへ向けて出力しているONのリピーターが隣にあるか
 function repFeeds(x, y, z) { for (const [dx, dz] of DIR4) { const n = getB(x + dx, y, z + dz); if (isRep(n) && repOn(n)) { const f = DIR4[repDir(n)]; if (x + dx + f[0] === x && z + dz + f[1] === z) return true; } } return false; }
 function repIn(x, y, z, b) { const f = DIR4[repDir(b)], bx = x - f[0], bz = z - f[1], n = getB(bx, y, bz); if (n === B.LEVER1 || n === B.BUTTON1 || n === B.RSTORCH1 || (isDust(n) && n > 70)) return true; if (isRep(n) && repOn(n)) { const g = DIR4[repDir(n)]; return bx + g[0] === x && bz + g[1] === z; } return false; }
@@ -2371,7 +2371,9 @@ function tickRep(ch) {
   for (const [i, tm] of [...repTimers]) { if (--tm.t > 0) continue; repTimers.delete(i); const b = blocks[i]; if (!isRep(b) || repOn(b) === tm.to) continue; const y = (i / (W * D)) | 0, r = i - y * W * D, z = (r / W) | 0, x = r - z * W, nb = B.REP0 + repDir(b) + (tm.to ? 4 : 0); if (applyBlock(x, y, z, nb, true)) ch.push([x, y, z, nb]); }
 }
 function fireDispenser(x, y, z, b) {
-  const i = bidx(x, y, z), e = ents.get(i); if (!e || !e.it) return; const [dx, dz] = DIR4[b - B.DISP0], px = x + dx + .5, py = y + .5, pz = z + dz + .5;
+  const i = bidx(x, y, z), e = ents.get(i); if (!e || !e.it) return;
+  if (rsNow - (dispCd.get(i) || -99) < 14) return; dispCd.set(i, rsNow);   // 信号の揺らぎで連続発射しないよう、約1.7秒の再装填時間
+  const [dx, dz] = DIR4[b - B.DISP0], px = x + dx + .5, py = y + .5, pz = z + dz + .5;
   if (e.it.tnt > 0) { e.it.tnt--; spawnTntEntity(px, py - .01, pz, 4); }
   else if (e.it.rockets > 0) { e.it.rockets--; launchRocket(null, { x: dx, y: .12, z: dz }, { x: px, y: py, z: pz }, true); }
   else { SND.click(.4); return; }
@@ -2414,7 +2416,7 @@ function pistonPush(x, y, z, ch) {
 }
 function stepRedstone(dt) {
   rsT += dt; if (rsT < .12) return; rsT = 0;
-  const ch = []; tickRep(ch); if (!rsQ.size) { flushCh(ch); return; }
+  rsNow++; const ch = []; tickRep(ch); if (!rsQ.size) { flushCh(ch); return; }
   const list = [...rsQ].slice(0, 300); for (const i of list) rsQ.delete(i);
   const plan = [];
   for (const i of list) {
@@ -3364,7 +3366,7 @@ function waterCannonCells(charges) {
   const arms = { L: [-2, 1, 3], R: [-2, -1, 2], l: [-1, 1, 3], r: [-1, -1, 2] };   // [x, 水マスのz, ディスペンサーの向き(3:-z,2:+z)]
   for (let x = -2; x <= 1; x++) for (let z = -1; z <= 1; z++) { if (x === 0) continue; A(x, 0, z, 'W'); }   // 水のプール(x=0の石柱の列を除く。左右対称にして横ブレを防ぐ)
   A(0, 0, 0, 'F'); A(0, 0, -1, 'F'); A(0, 0, 1, 'F');
-  for (const ch of charges) { const [x, wz, dir] = arms[ch]; A(x, 0, wz * 2, 'P', dir, 0); A(x, 1, wz * 2, 'D'); }
+  for (const ch of charges) { if (ch === 'a' || ch === 'b' || ch === 'c') { A(-3, 0, ch === 'a' ? -1 : ch === 'b' ? 0 : 1, 'P', 0, 0); continue; } const [x, wz, dir] = arms[ch]; A(x, 0, wz * 2, 'P', dir, 0); A(x, 1, wz * 2, 'D'); }   // a/b/c: 後ろの壁に付けたディスペンサー(前向き)
   for (let z = -2; z <= 2; z++) A(-3, 1, z, 'D');
   for (let x = -11; x <= -4; x++) { if (x === -7) A(x, 1, 0, 'R', 0, 1); else A(x, 1, 0, 'D'); }
   A(-12, 1, 0, 'L');
